@@ -1,30 +1,26 @@
-import operator
-print("palavra: ")
-world = str(input())
+class token:
+    def __init__(self, type, value):
+        self.type = type
+        self.value = value
 
 
-def separacao(world):
-    conta = []
-    numero = ""
-    print(world)
-    for i in world:
-        if i == "+" or i == "-":
-            conta.append(int(numero))
-            conta.append(i)
-            numero = ""
-        elif i != "":
-            numero += i
+class tokenizer:
+    def __init__(self, origin, position, actual):
+        self.origin = origin
+        self.position = position
+        self.actual
 
-    if numero != "":
-        conta.append(int(numero))
+    @staticmethod
+    def selectNext():
+        pass
 
-    return conta
 
-conta = separacao(world)
-resp = conta[0]
-for i in range(len(conta)):
-    if conta[i] == "+":
-        resp += conta[i+1]
-    if conta[i] == "-":
-        resp -= conta[i+1]
-print("resposta:", resp)
+class parser:
+    def __init__(self, tokens):
+        self.tokens = tokens
+    
+    def parseExpresion():
+        pass
+
+    def run(code):
+        parser.tokens = tokenizer(code)
