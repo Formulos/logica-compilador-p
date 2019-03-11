@@ -46,6 +46,14 @@ class tokenizer():
             self.actual = token("DIVI", "/")
             self.position += 1
 
+        elif self.origin[self.position] == "(":
+            self.actual = token("OPEN", "(")
+            self.position += 1
+
+        elif self.origin[self.position] == ")":
+            self.actual = token("CLOSE", ")")
+            self.position += 1
+
         elif self.origin[self.position] == " " or self.origin[self.position] == "\n":
             self.position += 1
 
@@ -63,28 +71,49 @@ class tokenizer():
 
 
 class parser:
-    
+
     @staticmethod
-    def mult_div():
+    def factor():
         result = parser.token.actual.value
+        
 
-        forbidden = ("FIN","PLUS","MINUS")
-        while parser.token.actual.stamp not in forbidden:
+        if parser.token.actual.stamp == "INT":
+            return result
+
+        elif parser.token.actual.stamp == "OPEN":
+            parser.token.selectNext()
+            result = parser.parseExpresion()
+            parser.token.selectNext()
+            if parser.token.actual.stamp != "CLOSE":
+                raise Exception("Error - Should have been a ), received: ", parser.token.actual.value)
 
 
+            
+
+
+
+
+    @staticmethod
+    def term():
+        result = parser.factor()
+
+        while parser.token.actual.stamp in {"MULTI","INT","DIVI"}:
+
+            
+            
 
             if parser.token.actual.stamp == "MULTI":
                 parser.token.selectNext()
                 #here
                 if parser.token.actual.stamp == "INT":
-                    result *= parser.token.actual.value
+                    result *= parser.factor()
                 else:
                     raise Exception("Error - Should have been a digit, error token: ", parser.token.actual.value)
 
             elif parser.token.actual.stamp == "DIVI":
                 parser.token.selectNext()
                 if parser.token.actual.stamp == "INT":
-                    result /= parser.token.actual.value
+                    result /= parser.factor()
                 else:
                     raise Exception("Error - Should have been a digit, error token: ", parser.token.actual.value)
 
@@ -101,19 +130,19 @@ class parser:
             while parser.token.actual.stamp != "FIN":
 
                 
-                result += parser.mult_div()
+                result += parser.term()
 
                 if parser.token.actual.stamp == "PLUS":
                     parser.token.selectNext()
                     if parser.token.actual.stamp == "INT":
-                        result += parser.mult_div()
+                        result += parser.term()
                     else:
                         raise Exception("Error - Should have been a digit, error token: ", parser.token.actual.value) 
 
                 elif parser.token.actual.stamp == "MINUS":
                     parser.token.selectNext()
                     if parser.token.actual.stamp == "INT":
-                        result -= parser.mult_div()
+                        result -= parser.term()
                     else:
                         raise Exception("Error - Should have been a digit, error token: ", parser.token.actual.value)
 
@@ -128,10 +157,11 @@ class parser:
         return parser.parseExpresion()
 
 if __name__ == '__main__':
-    #code = "1-2 '  bla"
+    code = "5*(3+2) '  bla"
     print("Your input: ")
 
-    code = input()
+    #code = input()
     code +="\n"
     print("result:",parser.run(code))
+
     #\n
