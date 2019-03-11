@@ -14,7 +14,6 @@ class PrePro():
                 for j in range(len(code[start:])):
                     if code[j+start] == "\n":
                         code = code[:start] + code[j+start:]
-                        print(code)
                         return code
         return code
         
