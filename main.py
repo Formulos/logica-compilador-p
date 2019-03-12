@@ -83,9 +83,11 @@ class parser:
         elif parser.token.actual.stamp == "OPEN":
             parser.token.selectNext()
             result = parser.parseExpresion()
-            parser.token.selectNext()
+            print(parser.token.actual.stamp)
             if parser.token.actual.stamp != "CLOSE":
                 raise Exception("Error - Should have been a ), received: ", parser.token.actual.value)
+            parser.token.selectNext()
+            return result
 
 
             
@@ -104,18 +106,15 @@ class parser:
 
             if parser.token.actual.stamp == "MULTI":
                 parser.token.selectNext()
-                #here
-                if parser.token.actual.stamp == "INT":
-                    result *= parser.factor()
-                else:
-                    raise Exception("Error - Should have been a digit, error token: ", parser.token.actual.value)
+                result *= parser.factor()
 
             elif parser.token.actual.stamp == "DIVI":
                 parser.token.selectNext()
-                if parser.token.actual.stamp == "INT":
-                    result /= parser.factor()
-                else:
-                    raise Exception("Error - Should have been a digit, error token: ", parser.token.actual.value)
+                result /= parser.factor()
+                
+            if parser.token.actual.stamp == "CLOSE":
+                break
+
 
             parser.token.selectNext()
         return result
@@ -124,28 +123,26 @@ class parser:
     def parseExpresion():
         result = None
 
-        if parser.token.actual.stamp == "INT":
-            result = 0
+        if True:
+            result = parser.term()
+            print(result)
             
             while parser.token.actual.stamp != "FIN":
 
-                
-                result += parser.term()
 
                 if parser.token.actual.stamp == "PLUS":
                     parser.token.selectNext()
-                    if parser.token.actual.stamp == "INT":
-                        result += parser.term()
-                    else:
-                        raise Exception("Error - Should have been a digit, error token: ", parser.token.actual.value) 
+                    result += parser.term()
+
 
                 elif parser.token.actual.stamp == "MINUS":
                     parser.token.selectNext()
-                    if parser.token.actual.stamp == "INT":
-                        result -= parser.term()
-                    else:
-                        raise Exception("Error - Should have been a digit, error token: ", parser.token.actual.value)
+                    result -= parser.term()
+                    
+                if parser.token.actual.stamp == "CLOSE":
+                    break
 
+                print("AAA",parser.token.actual.stamp)
                 parser.token.selectNext()
         return result
 
@@ -157,7 +154,7 @@ class parser:
         return parser.parseExpresion()
 
 if __name__ == '__main__':
-    code = "5*(3+2) '  bla"
+    code = "(2+3)*5 '  bla"
     print("Your input: ")
 
     #code = input()
