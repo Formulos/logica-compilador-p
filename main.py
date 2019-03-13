@@ -66,10 +66,6 @@ class tokenizer():
             raise Exception("Error - Unknow string: ", self.origin[self.position])
             
 
-
-        
-
-
 class parser:
 
     @staticmethod
@@ -94,12 +90,7 @@ class parser:
                 raise Exception("Error - Should have been a ), received: ", parser.token.actual.value)
             parser.token.selectNext()
             return result
-
-
-            
-
-
-
+        
 
     @staticmethod
     def term():
@@ -116,35 +107,26 @@ class parser:
                 parser.token.selectNext()
                 result /= parser.factor()
                 continue
-                
-            if parser.token.actual.stamp == "CLOSE":
-                break
-
 
             parser.token.selectNext()
         return result
+    
 
     @staticmethod
     def parseExpresion():
-
         result = parser.term()
         
-        while parser.token.actual.stamp != "FIN":
-
+        while parser.token.actual.stamp in {"PLUS","INT","MINUS"}:
 
             if parser.token.actual.stamp == "PLUS":
                 parser.token.selectNext()
                 result += parser.term()
                 continue
 
-
             elif parser.token.actual.stamp == "MINUS":
                 parser.token.selectNext()
                 result -= parser.term()
                 continue
-                
-            if parser.token.actual.stamp == "CLOSE":
-                break
 
             parser.token.selectNext()
             print(parser.token.actual.stamp)
@@ -158,7 +140,7 @@ class parser:
         return parser.parseExpresion()
 
 if __name__ == '__main__':
-    code = " 4/(1+1)*2*(1+3+--9-9)'  bla"
+    code = " -2+4/(1+1)*2*(1+3+--9-9)'  bla"
     print("Your input: ")
     #code = input()
     code +="\n"
