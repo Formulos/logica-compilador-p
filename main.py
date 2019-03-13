@@ -1,4 +1,3 @@
-import sys #para debug
 class token():
     def __init__(self, stamp, value):
         self.stamp = stamp
@@ -65,6 +64,7 @@ class tokenizer():
             self.actual = token("INT", int(number))
         else:
             raise Exception("Error - Unknow string: ", self.origin[self.position])
+            
 
 
         
@@ -76,6 +76,13 @@ class parser:
     def factor():
         result = parser.token.actual.value
         
+        if parser.token.actual.stamp == "PLUS":
+            parser.token.selectNext()
+            result = parser.factor()
+            
+        if parser.token.actual.stamp == "MINUS":
+            parser.token.selectNext()
+            result = parser.factor() * -1
 
         if parser.token.actual.stamp == "INT":
             return result
@@ -83,7 +90,6 @@ class parser:
         elif parser.token.actual.stamp == "OPEN":
             parser.token.selectNext()
             result = parser.parseExpresion()
-            print(parser.token.actual.stamp)
             if parser.token.actual.stamp != "CLOSE":
                 raise Exception("Error - Should have been a ), received: ", parser.token.actual.value)
             parser.token.selectNext()
@@ -101,16 +107,15 @@ class parser:
 
         while parser.token.actual.stamp in {"MULTI","INT","DIVI"}:
 
-            
-            
-
             if parser.token.actual.stamp == "MULTI":
                 parser.token.selectNext()
                 result *= parser.factor()
+                continue
 
             elif parser.token.actual.stamp == "DIVI":
                 parser.token.selectNext()
                 result /= parser.factor()
+                continue
                 
             if parser.token.actual.stamp == "CLOSE":
                 break
@@ -121,29 +126,28 @@ class parser:
 
     @staticmethod
     def parseExpresion():
-        result = None
 
-        if True:
-            result = parser.term()
-            print(result)
-            
-            while parser.token.actual.stamp != "FIN":
+        result = parser.term()
+        
+        while parser.token.actual.stamp != "FIN":
 
 
-                if parser.token.actual.stamp == "PLUS":
-                    parser.token.selectNext()
-                    result += parser.term()
-
-
-                elif parser.token.actual.stamp == "MINUS":
-                    parser.token.selectNext()
-                    result -= parser.term()
-                    
-                if parser.token.actual.stamp == "CLOSE":
-                    break
-
-                print("AAA",parser.token.actual.stamp)
+            if parser.token.actual.stamp == "PLUS":
                 parser.token.selectNext()
+                result += parser.term()
+                continue
+
+
+            elif parser.token.actual.stamp == "MINUS":
+                parser.token.selectNext()
+                result -= parser.term()
+                continue
+                
+            if parser.token.actual.stamp == "CLOSE":
+                break
+
+            parser.token.selectNext()
+            print(parser.token.actual.stamp)
         return result
 
     @staticmethod
@@ -154,11 +158,8 @@ class parser:
         return parser.parseExpresion()
 
 if __name__ == '__main__':
-    code = "(2+3)*5 '  bla"
+    code = " 4/(1+1)*2*(1+3+--9-9)'  bla"
     print("Your input: ")
-
     #code = input()
     code +="\n"
     print("result:",parser.run(code))
-
-    #\n
