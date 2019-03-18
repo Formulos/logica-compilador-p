@@ -135,13 +135,14 @@ class parser:
     @staticmethod
     def run(code):
         code = PrePro.filter(code)
+        print(code)
         parser.token = tokenizer(code)
         parser.token.selectNext()
         return parser.parseExpresion()
 
 if __name__ == '__main__':
-    code = " -2+4/(1+1)*2*(1+3+--9-9)'  bla"
+    #code = " (2+2) 'oi \n *2"
     print("Your input: ")
-    #code = input()
+    code = str(input())
     code +="\n"
     print("result:",parser.run(code))
