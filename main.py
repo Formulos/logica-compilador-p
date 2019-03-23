@@ -1,3 +1,4 @@
+
 class token():
     def __init__(self, stamp, value):
         self.stamp = stamp
@@ -65,6 +66,30 @@ class tokenizer():
         else:
             raise Exception("Error - Unknow string: ", self.origin[self.position])
             
+def funcname(self, parameter_list):
+    raise NotImplementedError
+
+"""This is a abstract class"""
+class Node():
+    def __init__(self, varient, l_children):
+        self.value = varient
+        self.children = l_children
+    def evaluate(self, varient):
+        raise Exception("Error - in abstract class")
+
+class BinOp(Node):
+    pass
+
+class UnOp(Node):
+    pass
+
+class IntVal(Node):
+    pass
+
+class NoOp(Node):
+    pass
+
+        
 
 class parser:
 
