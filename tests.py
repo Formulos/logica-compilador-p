@@ -78,3 +78,11 @@ def test_9():
     main.parser.token = main.tokenizer(code)
     main.parser.token.selectNext()
     assert main.parser.parseExpresion().evaluate() == eval(code)
+    
+def test_10():
+    code = "11+22-33 'bla"
+    code +="\n"
+    code = main.PrePro.filter(code)
+    main.parser.token = main.tokenizer(code)
+    main.parser.token.selectNext()
+    assert main.parser.parseExpresion().evaluate() == eval(code) # note: if eval returns a error it means that prepro failed
