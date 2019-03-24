@@ -83,6 +83,8 @@ class BinOp(Node):
         self.children = list_children
         if len(self.children) != 2: raise Exception("Error - in BinOp, BinOp needs two children, children: ",self.children)
     def evaluate(self):
+        print(self.value)
+        print(self.children)
         if self.value == "+":
             return self.children[0].evaluate() + self.children[1].evaluate()
         if self.value == "-":
@@ -96,10 +98,8 @@ class UnOp(Node):
     def __init__(self,value,list_children):
         self.value = value
         self.children = list_children
-        print("asdasd")
         if len(self.children) != 1: raise Exception("Error - in Unop, UnOp cant have more than one child, children: ",self.children)
     def evaluate(self):
-        print("AAA")
         if self.value == "+":
             return self.children[0].evaluate()
         if self.value == "-":
@@ -126,18 +126,17 @@ class parser:
 
     @staticmethod
     def factor():
-        result = parser.token.actual.value
         
         if parser.token.actual.stamp == "PLUS":
             parser.token.selectNext()
-            return  UnOp("+",[parser.factor()])
+            return UnOp("+",[parser.factor()])
             
         if parser.token.actual.stamp == "MINUS":
             parser.token.selectNext()
             return UnOp("-",[parser.factor()])
 
         if parser.token.actual.stamp == "INT":
-            return IntVal(result)
+            return IntVal(parser.token.actual.value)
 
         elif parser.token.actual.stamp == "OPEN":
             parser.token.selectNext()
@@ -153,15 +152,14 @@ class parser:
         result = parser.factor()
 
         while parser.token.actual.stamp in {"MULTI","INT","DIVI"}:
-
             if parser.token.actual.stamp == "MULTI":
                 parser.token.selectNext()
-                result = BinOp("*",[result,parser.term()])
+                result = BinOp("*",[result, parser.factor()])
                 continue
 
-            elif parser.token.actual.stamp == "DIVI":
+            elif parser.token.actual.stamp == "DIVI": # error wrong children order
                 parser.token.selectNext()
-                result = BinOp("/",[result,parser.term()])
+                result = BinOp("/",[result, parser.factor()])
                 continue
 
             parser.token.selectNext()
@@ -185,7 +183,6 @@ class parser:
                 continue
 
             parser.token.selectNext()
-            print(parser.token.actual.stamp)
         return result
 
     @staticmethod
@@ -196,7 +193,7 @@ class parser:
         return parser.parseExpresion().evaluate()
 
 if __name__ == '__main__':
-    code = " (-1+1)+1*2*(2/2+2*2)"
+    code = " 4/(1+1)*2"
     #print("Your input: ")
     #a = BinOp("+",[IntVal(1),IntVal(1)])
     #print(a.evaluate(1))
