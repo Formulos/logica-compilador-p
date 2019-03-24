@@ -71,23 +71,54 @@ def funcname(self, parameter_list):
 
 """This is a abstract class"""
 class Node():
-    def __init__(self, varient, l_children):
+    def __init__(self, varient, list_children):
         self.value = varient
-        self.children = l_children
+        self.children = list_children
     def evaluate(self, varient):
-        raise Exception("Error - in abstract class")
+        raise Exception("Error - in abstract class, evaluate was not overwriten")
 
 class BinOp(Node):
-    pass
+    def __init__(self,value,list_children):
+        self.value = value
+        self.children = list_children
+        if len(self.children) != 2: raise Exception("Error - in BinOp, BinOp needs two children, children: ",self.children)
+    def evaluate(self):
+        if self.value == "+":
+            return self.children[0].evaluate() + self.children[1].evaluate()
+        if self.value == "-":
+            return self.children[0].evaluate() - self.children[1].evaluate()
+        if self.value == "*":
+            return self.children[0].evaluate() * self.children[1].evaluate()
+        if self.value == "/":
+            return self.children[0].evaluate() / self.children[1].evaluate()
 
 class UnOp(Node):
-    pass
+    def __init__(self,value,list_children):
+        self.value = value
+        self.children = list_children
+        print("asdasd")
+        if len(self.children) != 1: raise Exception("Error - in Unop, UnOp cant have more than one child, children: ",self.children)
+    def evaluate(self):
+        print("AAA")
+        if self.value == "+":
+            return self.children[0].evaluate()
+        if self.value == "-":
+            return self.children[0].evaluate() * -1
 
 class IntVal(Node):
-    pass
+    def __init__(self,value):
+        self.value = value
+        self.children = []
+    def evaluate(self):
+        return self.value
 
 class NoOp(Node):
-    pass
+    def __init__(self):
+        self.value = None
+        self.children = []
+    def evaluate(self):
+        pass
+    
 
         
 
@@ -99,14 +130,14 @@ class parser:
         
         if parser.token.actual.stamp == "PLUS":
             parser.token.selectNext()
-            result = parser.factor()
+            return  UnOp("+",[parser.factor()])
             
         if parser.token.actual.stamp == "MINUS":
             parser.token.selectNext()
-            result = parser.factor() * -1
+            return UnOp("-",[parser.factor()])
 
         if parser.token.actual.stamp == "INT":
-            return result
+            return IntVal(result)
 
         elif parser.token.actual.stamp == "OPEN":
             parser.token.selectNext()
@@ -125,12 +156,12 @@ class parser:
 
             if parser.token.actual.stamp == "MULTI":
                 parser.token.selectNext()
-                result *= parser.factor()
+                result = BinOp("*",[result,parser.term()])
                 continue
 
             elif parser.token.actual.stamp == "DIVI":
                 parser.token.selectNext()
-                result /= parser.factor()
+                result = BinOp("/",[result,parser.term()])
                 continue
 
             parser.token.selectNext()
@@ -145,12 +176,12 @@ class parser:
 
             if parser.token.actual.stamp == "PLUS":
                 parser.token.selectNext()
-                result += parser.term()
+                result = BinOp("+",[result,parser.term()])
                 continue
 
             elif parser.token.actual.stamp == "MINUS":
                 parser.token.selectNext()
-                result -= parser.term()
+                result = BinOp("-",[result,parser.term()])
                 continue
 
             parser.token.selectNext()
@@ -160,14 +191,15 @@ class parser:
     @staticmethod
     def run(code):
         code = PrePro.filter(code)
-        print(code)
         parser.token = tokenizer(code)
         parser.token.selectNext()
-        return parser.parseExpresion()
+        return parser.parseExpresion().evaluate()
 
 if __name__ == '__main__':
-    #code = " (2+2) 'oi \n *2"
-    print("Your input: ")
-    code = str(input())
+    code = " (-1+1)+1*2*(2/2+2*2)"
+    #print("Your input: ")
+    #a = BinOp("+",[IntVal(1),IntVal(1)])
+    #print(a.evaluate(1))
+    #code = str(input())
     code +="\n"
     print("result:",parser.run(code))
