@@ -86,3 +86,11 @@ def test_10():
     main.parser.token = main.tokenizer(code)
     main.parser.token.selectNext()
     assert main.parser.parseExpresion().evaluate() == eval(code) # note: if eval returns a error it means that prepro failed
+    
+def test_11():
+    code = "(2+3)/(5*1)"
+    code +="\n"
+    code = main.PrePro.filter(code)
+    main.parser.token = main.tokenizer(code)
+    main.parser.token.selectNext()
+    assert main.parser.parseExpresion().evaluate() == eval(code)

@@ -83,8 +83,8 @@ class BinOp(Node):
         self.children = list_children
         if len(self.children) != 2: raise Exception("Error - in BinOp, BinOp needs two children, children: ",self.children)
     def evaluate(self):
-        print(self.value)
-        print(self.children)
+        #print(self.value)
+        #print(self.children)
         if self.value == "+":
             return self.children[0].evaluate() + self.children[1].evaluate()
         if self.value == "-":
