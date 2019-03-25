@@ -17,7 +17,6 @@ class PrePro():
                     if code[j+start] == "\n":
                         code = code[:start] + code[j+start:]
                         return code
-                        size = len(code)
         return code
 
 class tokenizer():
@@ -171,7 +170,6 @@ class parser:
 
     @staticmethod
     def parseExpresion():
-        print()
         result = parser.term()
         
         while parser.token.actual.stamp in {"PLUS","MINUS"}:
@@ -194,18 +192,17 @@ class parser:
     @staticmethod
     def run(code):
         code = PrePro.filter(code)
-        print(code)
         parser.token = tokenizer(code)
         parser.token.selectNext()
         ast = parser.parseExpresion()
         if parser.token.actual.stamp != "FIN":
-            raise Exception("Error - ast finished withou flag FIN, flag returned ", parser.token.actual.value)
+            raise Exception("Error - ast finished without flag FIN, flag returned: ", parser.token.actual.value)
         return ast 
 
 if __name__ == '__main__':
-    code = "(1+1))"
-    #print("Your input: ")
-    #code = str(input())
-    #code = sys.argv[1]
-    code +="\n"
-    print("result:",parser.run(code).evaluate())
+    with open("code.vbs", "r") as in_file:
+            list_file = in_file.readlines()
+    in_file.close()
+
+    for c in list_file:
+        print("result:",parser.run(c).evaluate())
