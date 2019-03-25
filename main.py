@@ -1,3 +1,5 @@
+import sys
+
 class token():
     def __init__(self, stamp, value):
         self.stamp = stamp
@@ -7,7 +9,8 @@ class PrePro():
     
     @staticmethod
     def filter(code):
-        for i in range(len(code)):
+        size = len(code)
+        for i in range(size):
             if code[i] == "'":
                 start = i
                 for j in range(len(code[start:])):
@@ -15,7 +18,7 @@ class PrePro():
                         code = code[:start] + code[j+start:]
                         return code
         return code
-        
+
 class tokenizer():
     def __init__(self, origin):
         self.origin = origin
@@ -26,7 +29,7 @@ class tokenizer():
         while (self.position < len(self.origin)) and self.origin[self.position] == " ":
             self.position += 1
 
-        if self.position >= len(self.origin):
+        if self.position >= len(self.origin)-1:
             self.actual = token("FIN", "FIN")
 
         elif self.origin[self.position] == "+":
@@ -65,23 +68,77 @@ class tokenizer():
         else:
             raise Exception("Error - Unknow string: ", self.origin[self.position])
             
+def funcname(self, parameter_list):
+    raise NotImplementedError
+
+"""This is a abstract class"""
+class Node():
+    def __init__(self, varient, list_children):
+        self.value = varient
+        self.children = list_children
+    def evaluate(self, varient):
+        raise Exception("Error - in abstract class, evaluate was not overwriten")
+
+class BinOp(Node):
+    def __init__(self,value,list_children):
+        self.value = value
+        self.children = list_children
+        if len(self.children) != 2: raise Exception("Error - in BinOp, BinOp needs two children, children: ",self.children)
+    def evaluate(self):
+        #print(self.value)
+        #print(self.children)
+        if self.value == "+":
+            return self.children[0].evaluate() + self.children[1].evaluate()
+        if self.value == "-":
+            return self.children[0].evaluate() - self.children[1].evaluate()
+        if self.value == "*":
+            return self.children[0].evaluate() * self.children[1].evaluate()
+        if self.value == "/":
+            return self.children[0].evaluate() / self.children[1].evaluate()
+
+class UnOp(Node):
+    def __init__(self,value,list_children):
+        self.value = value
+        self.children = list_children
+        if len(self.children) != 1: raise Exception("Error - in Unop, UnOp cant have more than one child, children: ",self.children)
+    def evaluate(self):
+        if self.value == "+":
+            return self.children[0].evaluate()
+        if self.value == "-":
+            return self.children[0].evaluate() * -1
+
+class IntVal(Node):
+    def __init__(self,value):
+        self.value = value
+        self.children = []
+    def evaluate(self):
+        return self.value
+
+class NoOp(Node):
+    def __init__(self):
+        self.value = None
+        self.children = []
+    def evaluate(self):
+        pass
+    
+
+        
 
 class parser:
 
     @staticmethod
     def factor():
-        result = parser.token.actual.value
         
         if parser.token.actual.stamp == "PLUS":
             parser.token.selectNext()
-            result = parser.factor()
+            return UnOp("+",[parser.factor()])
             
         if parser.token.actual.stamp == "MINUS":
             parser.token.selectNext()
-            result = parser.factor() * -1
+            return UnOp("-",[parser.factor()])
 
         if parser.token.actual.stamp == "INT":
-            return result
+            return IntVal(parser.token.actual.value)
 
         elif parser.token.actual.stamp == "OPEN":
             parser.token.selectNext()
@@ -97,15 +154,14 @@ class parser:
         result = parser.factor()
 
         while parser.token.actual.stamp in {"MULTI","INT","DIVI"}:
-
             if parser.token.actual.stamp == "MULTI":
                 parser.token.selectNext()
-                result *= parser.factor()
+                result = BinOp("*",[result, parser.factor()])
                 continue
 
-            elif parser.token.actual.stamp == "DIVI":
+            elif parser.token.actual.stamp == "DIVI": # error wrong children order
                 parser.token.selectNext()
-                result /= parser.factor()
+                result = BinOp("/",[result, parser.factor()])
                 continue
 
             parser.token.selectNext()
@@ -116,33 +172,37 @@ class parser:
     def parseExpresion():
         result = parser.term()
         
-        while parser.token.actual.stamp in {"PLUS","INT","MINUS"}:
+        while parser.token.actual.stamp in {"PLUS","MINUS"}:
 
             if parser.token.actual.stamp == "PLUS":
                 parser.token.selectNext()
-                result += parser.term()
+                result = BinOp("+",[result,parser.term()])
                 continue
 
             elif parser.token.actual.stamp == "MINUS":
                 parser.token.selectNext()
-                result -= parser.term()
+                result = BinOp("-",[result,parser.term()])
                 continue
 
             parser.token.selectNext()
-            print(parser.token.actual.stamp)
+        
+
         return result
 
     @staticmethod
     def run(code):
         code = PrePro.filter(code)
-        print(code)
         parser.token = tokenizer(code)
         parser.token.selectNext()
-        return parser.parseExpresion()
+        ast = parser.parseExpresion()
+        if parser.token.actual.stamp != "FIN":
+            raise Exception("Error - ast finished without flag FIN, flag returned: ", parser.token.actual.value)
+        return ast 
 
 if __name__ == '__main__':
-    #code = " (2+2) 'oi \n *2"
-    print("Your input: ")
-    code = str(input())
-    code +="\n"
-    print("result:",parser.run(code))
+    with open("code.vbs", "r") as in_file:
+            list_file = in_file.readlines()
+    in_file.close()
+
+    for c in list_file:
+        print("result:",parser.run(c).evaluate())
