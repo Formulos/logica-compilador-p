@@ -1,3 +1,4 @@
+import sys
 
 class token():
     def __init__(self, stamp, value):
@@ -8,15 +9,17 @@ class PrePro():
     
     @staticmethod
     def filter(code):
-        for i in range(len(code)):
+        size = len(code)
+        for i in range(size):
             if code[i] == "'":
                 start = i
                 for j in range(len(code[start:])):
                     if code[j+start] == "\n":
                         code = code[:start] + code[j+start:]
                         return code
+                        size = len(code)
         return code
-        
+
 class tokenizer():
     def __init__(self, origin):
         self.origin = origin
@@ -27,7 +30,7 @@ class tokenizer():
         while (self.position < len(self.origin)) and self.origin[self.position] == " ":
             self.position += 1
 
-        if self.position >= len(self.origin):
+        if self.position >= len(self.origin)-1:
             self.actual = token("FIN", "FIN")
 
         elif self.origin[self.position] == "+":
@@ -168,9 +171,10 @@ class parser:
 
     @staticmethod
     def parseExpresion():
+        print()
         result = parser.term()
         
-        while parser.token.actual.stamp in {"PLUS","INT","MINUS"}:
+        while parser.token.actual.stamp in {"PLUS","MINUS"}:
 
             if parser.token.actual.stamp == "PLUS":
                 parser.token.selectNext()
@@ -183,20 +187,25 @@ class parser:
                 continue
 
             parser.token.selectNext()
+        
+
         return result
 
     @staticmethod
     def run(code):
         code = PrePro.filter(code)
+        print(code)
         parser.token = tokenizer(code)
         parser.token.selectNext()
-        return parser.parseExpresion().evaluate()
+        ast = parser.parseExpresion()
+        if parser.token.actual.stamp != "FIN":
+            raise Exception("Error - ast finished withou flag FIN, flag returned ", parser.token.actual.value)
+        return ast 
 
 if __name__ == '__main__':
-    code = " 4/(1+1)*2"
+    code = "(1+1))"
     #print("Your input: ")
-    #a = BinOp("+",[IntVal(1),IntVal(1)])
-    #print(a.evaluate(1))
     #code = str(input())
+    #code = sys.argv[1]
     code +="\n"
-    print("result:",parser.run(code))
+    print("result:",parser.run(code).evaluate())
