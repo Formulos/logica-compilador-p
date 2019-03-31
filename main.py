@@ -52,7 +52,17 @@ class tokenizer():
         while (self.position < len(self.origin)) and (self.origin[self.position] == " " or self.origin[self.position] == "\n"):
             self.position += 1
 
-        if self.position >= len(self.origin)-1:
+        if self.origin[self.position].isalpha():
+            string = ""
+            while (self.position < len(self.origin)) and (self.origin[self.position].isalpha()):
+                string += self.origin[self.position]
+                self.position += 1
+            if string == "print":
+                self.actual = token("S_SRT", string) # s = special
+            else:
+                self.actual = token("SRT", string)
+
+        elif self.position >= len(self.origin)-1:
             self.actual = token("FIN", "FIN")
 
         elif self.origin[self.position] == "+":
@@ -88,8 +98,6 @@ class tokenizer():
                 number += self.origin[self.position]
                 self.position += 1
             self.actual = token("INT", int(number))
-        else:
-            raise Exception("Error - Unknow string: ", self.origin[self.position])
             
 def funcname(self, parameter_list):
     raise NotImplementedError
@@ -144,8 +152,15 @@ class NoOp(Node):
     def evaluate(self):
         pass
     
+class SymbolTable():
+    def __init__(self):
+        self.table = {}
 
-        
+    def getter(self,key):
+        return self.table[key]
+
+    def setter(self,key,value):
+        self.table[key] = value
 
 class parser:
 
