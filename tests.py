@@ -94,3 +94,11 @@ def test_11():
     main.parser.token = main.tokenizer(code)
     main.parser.token.selectNext()
     assert main.parser.parseExpresion().evaluate() == eval(code)
+
+def test_12():
+    code = "1+1 \n 'bla"
+    code +="\n"
+    code = main.PrePro.filter(code)
+    main.parser.token = main.tokenizer(code)
+    main.parser.token.selectNext()
+    assert main.parser.parseExpresion().evaluate() == eval(code)

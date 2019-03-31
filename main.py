@@ -8,7 +8,8 @@ class token():
 class PrePro():
     
     @staticmethod
-    def filter(code):
+    def filter3(code):
+        code = code.replace('\\n', '\n')
         size = len(code)
         for i in range(size):
             if code[i] == "'":
@@ -19,6 +20,28 @@ class PrePro():
                         return code
         return code
 
+    @staticmethod
+    def filter(code):
+        code = code.replace('\\n', '\n')
+        size = len(code)
+        i = 0
+        c_start = None #start of coment
+        in_coment = False
+        while i < (size):
+            if code[i] == "'" and in_coment == False:
+                c_start = i
+                in_coment = True
+            
+            if code[i] == "\n" and in_coment == True:
+                code = code[:c_start] + code[i+1:]
+                size = len(code)
+                i = 0
+                in_coment = False
+            i+= 1
+            
+        return code
+            
+
 class tokenizer():
     def __init__(self, origin):
         self.origin = origin
@@ -26,7 +49,7 @@ class tokenizer():
         self.actual = token("FIN", "FIN")
 
     def selectNext(self):
-        while (self.position < len(self.origin)) and self.origin[self.position] == " ":
+        while (self.position < len(self.origin)) and (self.origin[self.position] == " " or self.origin[self.position] == "\n"):
             self.position += 1
 
         if self.position >= len(self.origin)-1:
@@ -145,6 +168,7 @@ class parser:
             result = parser.parseExpresion()
             if parser.token.actual.stamp != "CLOSE":
                 raise Exception("Error - Should have been a ), received: ", parser.token.actual.value)
+                
             parser.token.selectNext()
             return result
         
@@ -159,7 +183,7 @@ class parser:
                 result = BinOp("*",[result, parser.factor()])
                 continue
 
-            elif parser.token.actual.stamp == "DIVI": # error wrong children order
+            elif parser.token.actual.stamp == "DIVI":
                 parser.token.selectNext()
                 result = BinOp("/",[result, parser.factor()])
                 continue
@@ -192,6 +216,7 @@ class parser:
     @staticmethod
     def run(code):
         code = PrePro.filter(code)
+        print(code)
         parser.token = tokenizer(code)
         parser.token.selectNext()
         ast = parser.parseExpresion()
@@ -200,9 +225,8 @@ class parser:
         return ast 
 
 if __name__ == '__main__':
-    with open("code.vbs", "r") as in_file:
-            list_file = in_file.readlines()
-    in_file.close()
+    #sys.argv[1]
+    with open(sys.argv[1], "r") as in_file:
+            code = in_file.read()
 
-    for c in list_file:
-        print("result:",parser.run(c).evaluate())
+    print("result:",parser.run(code).evaluate())
