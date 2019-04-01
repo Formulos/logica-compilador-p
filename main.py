@@ -52,17 +52,7 @@ class tokenizer():
         while (self.position < len(self.origin)) and (self.origin[self.position] == " " or self.origin[self.position] == "\n"):
             self.position += 1
 
-        if self.origin[self.position].isalpha():
-            string = ""
-            while (self.position < len(self.origin)) and (self.origin[self.position].isalpha()):
-                string += self.origin[self.position]
-                self.position += 1
-            if string == "print":
-                self.actual = token("S_SRT", string) # s = special
-            else:
-                self.actual = token("SRT", string)
-
-        elif self.position >= len(self.origin)-1:
+        if self.position >= len(self.origin)-1:
             self.actual = token("FIN", "FIN")
 
         elif self.origin[self.position] == "+":
@@ -92,15 +82,22 @@ class tokenizer():
         elif self.origin[self.position] == " " or self.origin[self.position] == "\n":
             self.position += 1
 
+        elif self.origin[self.position].isalpha():
+            string = ""
+            while (self.position < len(self.origin)) and (self.origin[self.position].isalpha()):
+                string += self.origin[self.position]
+                self.position += 1
+            if string == "print":
+                self.actual = token("S_STR", string) # s = special
+            else:
+                self.actual = token("STR", string)
+
         elif self.origin[self.position].isdigit():
             number = ""
             while (self.position < len(self.origin)) and (self.origin[self.position].isdigit()):
                 number += self.origin[self.position]
                 self.position += 1
             self.actual = token("INT", int(number))
-            
-def funcname(self, parameter_list):
-    raise NotImplementedError
 
 """This is a abstract class"""
 class Node():
@@ -241,7 +238,9 @@ class parser:
 
 if __name__ == '__main__':
     #sys.argv[1]
-    with open(sys.argv[1], "r") as in_file:
+    with open("code.vbs", "r") as in_file:
             code = in_file.read()
+
+    code += "\n"
 
     print("result:",parser.run(code).evaluate())
