@@ -49,11 +49,16 @@ class tokenizer():
         self.actual = token("FIN", "FIN")
 
     def selectNext(self):
-        while (self.position < len(self.origin)) and (self.origin[self.position] == " " or self.origin[self.position] == "\n"):
+        while (self.position < len(self.origin)) and (self.origin[self.position] == " "):
             self.position += 1
 
-        if self.position >= len(self.origin)-1:
-            self.actual = token("FIN", "FIN")
+        if self.origin[self.position] == "=":
+            self.actual = token("EQUAL", "=")
+            self.position += 1
+
+        elif self.origin[self.position] == "\n":
+            self.actual = token("LBREAK", "n") #Line Break
+            self.position += 1
 
         elif self.origin[self.position] == "+":
             self.actual = token("PLUS", "+")
@@ -89,8 +94,12 @@ class tokenizer():
                 self.position += 1
             if string == "print":
                 self.actual = token("S_STR", string) # s = special
+            elif string == "Begin":
+                self.actual = token("BEGIN", string) # s = special
+            elif string == "End":
+                self.actual = token("FIN", string) # s = special
             else:
-                self.actual = token("STR", string)
+                self.actual = token("ID", string)
 
         elif self.origin[self.position].isdigit():
             number = ""
@@ -113,8 +122,6 @@ class BinOp(Node):
         self.children = list_children
         if len(self.children) != 2: raise Exception("Error - in BinOp, BinOp needs two children, children: ",self.children)
     def evaluate(self):
-        #print(self.value)
-        #print(self.children)
         if self.value == "+":
             return self.children[0].evaluate() + self.children[1].evaluate()
         if self.value == "-":
@@ -141,6 +148,29 @@ class IntVal(Node):
         self.children = []
     def evaluate(self):
         return self.value
+
+class VarStr(Node):
+    def __init__(self,value):
+        self.value = value
+        self.children = []
+    def evaluate(self,table):
+        return table.getter(self.value)
+
+class Assigmen(Node):
+    def __init__(self,value,list_children):
+        self.value = value
+        self.children = list_children
+        if len(self.children) != 2: raise Exception("Error - in BinOp, BinOp needs two children, children: ",self.children)
+    def evaluate(self,table):
+        var_key = self.children[0].value
+        table.setter(var_key,self.children[1].evaluate())
+
+class Print(Node): # reserved string
+    def __init__(self,value):
+        self.value = value
+        self.children = []
+    def evaluate(self,table):
+        print(self.children[0].evaluate())
 
 class NoOp(Node):
     def __init__(self):
@@ -206,7 +236,7 @@ class parser:
 
     @staticmethod
     def parseExpresion():
-        result = parser.term()
+        parser.token.actual.stamp == "PLUS"
         
         while parser.token.actual.stamp in {"PLUS","MINUS"}:
 
@@ -226,12 +256,37 @@ class parser:
         return result
 
     @staticmethod
+    def Statement():
+        if parser.token.actual.stamp == "BEGIN":
+            pass
+
+        elif parser.token.actual.stamp == "ID":
+            parser.token.selectNext()
+            if parser.token.actual.stamp == "EQUAL":
+                parser.token.selectNext()
+                parser.parseExpresion()
+
+
+    @staticmethod
+    def Statements():
+        if parser.token.actual.stamp == "BEGIN":
+            parser.token.selectNext()
+            if parser.token.actual.stamp == "LBREAK":
+                parser.token.selectNext()
+                while parser.token.actual.stamp != "FIN":
+                    parser.Statement()
+
+        else:
+            raise Exception("Error - Dosent start with Begin, recived ", parser.token.actual.stamp)
+
+
+    @staticmethod
     def run(code):
         code = PrePro.filter(code)
         print(code)
         parser.token = tokenizer(code)
         parser.token.selectNext()
-        ast = parser.parseExpresion()
+        ast = parser.Statements()
         if parser.token.actual.stamp != "FIN":
             raise Exception("Error - ast finished without flag FIN, flag returned: ", parser.token.actual.value)
         return ast 

@@ -1,3 +1,7 @@
+Begin
 ' comment
-3- -2/4
+
+a = 1
+
 ' bla
+End
