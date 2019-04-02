@@ -309,7 +309,7 @@ class parser:
 
 if __name__ == '__main__':
     #sys.argv[1]
-    with open("code.vbs", "r") as in_file:
+    with open(sys.argv[1], "r") as in_file:
             code = in_file.read()
 
     code += "\n"
