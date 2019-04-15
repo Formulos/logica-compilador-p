@@ -47,6 +47,14 @@ class tokenizer():
             self.actual = token("LBREAK", "\n") #Line Break
             self.position += 1
 
+        elif self.origin[self.position] == ">":
+            self.actual = token("BIGGER", ">")
+            self.position += 1
+
+        elif self.origin[self.position] == "<":
+            self.actual = token("SMALER", "<")
+            self.position += 1
+
         elif self.origin[self.position] == "+":
             self.actual = token("PLUS", "+")
             self.position += 1
@@ -82,6 +90,8 @@ class tokenizer():
                 self.actual = token("BEGIN", string) # s = special
             elif string == "End":
                 self.actual = token("FIN", string) # s = special
+            elif string == "WEnd":
+                self.actual = token("WFIN", string) # s = special
             elif string == "if":
                 self.actual = token("IF", string) # s = special
             elif string == "else":
@@ -134,6 +144,10 @@ class BinOp(Node):
             return self.children[0].evaluate(table) / self.children[1].evaluate(table)
         if self.value == "=":
             return (self.children[0].evaluate(table) == self.children[1].evaluate(table))
+        if self.value == ">":
+            return (self.children[0].evaluate(table) > self.children[1].evaluate(table))
+        if self.value == "<":
+            return (self.children[0].evaluate(table) < self.children[1].evaluate(table))
         if self.value == "or":
                     return (self.children[0].evaluate(table) or self.children[1].evaluate(table))
         if self.value == "and":
@@ -331,6 +345,12 @@ class parser:
         if parser.token.actual.value == "=":
             parser.token.selectNext()
             return BinOp("=",[result,parser.parseExpression()])
+        if parser.token.actual.value == ">":
+            parser.token.selectNext()
+            return BinOp(">",[result,parser.parseExpression()])
+        if parser.token.actual.value == "<":
+            parser.token.selectNext()
+            return BinOp("<",[result,parser.parseExpression()])
 
     @staticmethod
     def Statement():
@@ -348,25 +368,31 @@ class parser:
             parser.token.selectNext()
             return Print([parser.parseExpression()])
 
-        
+        elif parser.token.actual.stamp == "WHILE":
+            parser.token.selectNext()
+            exp = [parser.RelExpression()]
+            exp.append(parser.Statements())
+            if parser.token.actual.stamp == "WFIN":
+                return Node_While(exp)
+            raise Exception("Error - while expression did not enconter WEnd, received: ", parser.token.actual.value)
+
         elif parser.token.actual.stamp == "IF":
             parser.token.selectNext()
             exp = [parser.RelExpression()]
             if parser.token.actual.stamp == "THEN":
                 parser.token.selectNext()
                 exp.append(parser.Statements())
+
                 if parser.token.actual.stamp == "ELSE":
                     parser.token.selectNext()
                     exp.append(parser.Statements())
-
-                if parser.token.actual.stamp == "END":
                     parser.token.selectNext()
-                    if parser.token.actual.stamp == "IF":
-                        parser.token.selectNext()
-                        return Node_if(exp)
 
-                    raise Exception("Error - if expression did not enconter if after end, received: ", parser.token.actual.value)
-                raise Exception("Error - if expression did not enconter end, received: ", parser.token.actual.value)
+                if parser.token.actual.stamp == "IF":
+                    parser.token.selectNext()
+                    return Node_if(exp)
+
+                raise Exception("Error - if expression did not enconter if after end, received: ", parser.token.actual.value)
             raise Exception("Error - if expression did not enconter then, received: ", parser.token.actual.value)
 
 
@@ -378,26 +404,17 @@ class parser:
     @staticmethod
     def Statements():
         state_children = []
-        if parser.token.actual.stamp == "BEGIN":
+        state_children.append(parser.Statement())
+        while parser.token.actual.stamp == "LBREAK":
             parser.token.selectNext()
-            if parser.token.actual.stamp == "LBREAK":
-                parser.token.selectNext()
-                while parser.token.actual.stamp != "FIN":
-                    state_children.append(parser.Statement())
+            state_children.append(parser.Statement())
 
-                    if parser.token.actual.stamp != "LBREAK":
-                        raise Exception("Error - No line break after expression, received: ", parser.token.actual.value)
+            #if parser.token.actual.stamp != "LBREAK":
+            #    raise Exception("Error - No line break after expression, received: ", parser.token.actual.value)
 
-                    parser.token.selectNext()
-            
-            else:
-                raise Exception("Error - No line break after Begin, received: ", parser.token.actual.value)
+            #parser.token.selectNext()
 
-
-        else:
-            raise Exception("Error - Dosent start with Begin, recieved ", parser.token.actual.stamp)
-
-        parser.token.selectNext()
+        #parser.token.selectNext()
         return Statements('statements', state_children)
 
 
