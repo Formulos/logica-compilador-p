@@ -96,6 +96,8 @@ class tokenizer():
                 self.actual = token("NOT", string) # s = special
             elif string == "then":
                 self.actual = token("THEN", string) # s = special
+            elif string == "input":
+                self.actual = token("INPUT", string) # s = special
             else:
                 self.actual = token("ID", string)
 
@@ -162,6 +164,12 @@ class Identifier(Node):
         self.value = value
     def evaluate(self,table):
         return table.getter(self.value)
+
+class Node_Input(Node):
+    def __init__(self,value):
+        self.value = value
+    def evaluate(self,table):
+        return input()
 
 class Assignment(Node):
     def __init__(self,value,list_children):
@@ -249,6 +257,11 @@ class parser:
 
         if parser.token.actual.stamp == 'ID':
             node = Identifier(parser.token.actual.value)
+            parser.token.selectNext()
+            return node
+
+        if parser.token.actual.stamp == 'INPUT':
+            node = Node_Input(parser.token.actual.value)
             parser.token.selectNext()
             return node
 
