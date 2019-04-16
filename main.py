@@ -47,6 +47,14 @@ class tokenizer():
             self.actual = token("LBREAK", "\n") #Line Break
             self.position += 1
 
+        elif self.origin[self.position] == ">":
+            self.actual = token("BIGGER", ">")
+            self.position += 1
+
+        elif self.origin[self.position] == "<":
+            self.actual = token("SMALER", "<")
+            self.position += 1
+
         elif self.origin[self.position] == "+":
             self.actual = token("PLUS", "+")
             self.position += 1
@@ -82,6 +90,24 @@ class tokenizer():
                 self.actual = token("BEGIN", string) # s = special
             elif string == "End":
                 self.actual = token("FIN", string) # s = special
+            elif string == "WEnd":
+                self.actual = token("WFIN", string) # s = special
+            elif string == "if":
+                self.actual = token("IF", string) # s = special
+            elif string == "else":
+                self.actual = token("ELSE", string) # s = special
+            elif string == "while":
+                self.actual = token("WHILE", string) # s = special
+            elif string == "and":
+                self.actual = token("AND", string) # s = special
+            elif string == "or":
+                self.actual = token("OR", string) # s = special
+            elif string == "not":
+                self.actual = token("NOT", string) # s = special
+            elif string == "then":
+                self.actual = token("THEN", string) # s = special
+            elif string == "input":
+                self.actual = token("INPUT", string) # s = special
             else:
                 self.actual = token("ID", string)
 
@@ -91,6 +117,8 @@ class tokenizer():
                 number += self.origin[self.position]
                 self.position += 1
             self.actual = token("INT", int(number))
+
+#-------- Nodes -----------
 
 """This is a abstract class"""
 class Node():
@@ -114,6 +142,16 @@ class BinOp(Node):
             return self.children[0].evaluate(table) * self.children[1].evaluate(table)
         if self.value == "/":
             return self.children[0].evaluate(table) / self.children[1].evaluate(table)
+        if self.value == "=":
+            return (self.children[0].evaluate(table) == self.children[1].evaluate(table))
+        if self.value == ">":
+            return (self.children[0].evaluate(table) > self.children[1].evaluate(table))
+        if self.value == "<":
+            return (self.children[0].evaluate(table) < self.children[1].evaluate(table))
+        if self.value == "or":
+                    return (self.children[0].evaluate(table) or self.children[1].evaluate(table))
+        if self.value == "and":
+                    return (self.children[0].evaluate(table) and self.children[1].evaluate(table))
 
 class UnOp(Node):
     def __init__(self,value,list_children):
@@ -125,6 +163,8 @@ class UnOp(Node):
             return self.children[0].evaluate(table)
         if self.value == "-":
             return self.children[0].evaluate(table) * -1
+        if self.value == "not":
+            return (not self.children[0].evaluate(table))
 
 class IntVal(Node):
     def __init__(self,value):
@@ -138,6 +178,12 @@ class Identifier(Node):
         self.value = value
     def evaluate(self,table):
         return table.getter(self.value)
+
+class Node_Input(Node):
+    def __init__(self,value):
+        self.value = value
+    def evaluate(self,table):
+        return input()
 
 class Assignment(Node):
     def __init__(self,value,list_children):
@@ -154,6 +200,24 @@ class Print(Node): # reserved string
         tmp = self.children[0].evaluate(table)
         print(tmp)
 
+class Node_if(Node): # reserved string
+    def __init__(self,list_children):
+        self.children = list_children
+    def evaluate(self,table):
+        if self.children[0].evaluate(table):
+            return self.children[1].evaluate(table)
+        elif len(self.children) == 3: # this if contains a else
+            return self.children[2].evaluate(table)
+        return None
+
+class Node_While(Node): # reserved string
+    def __init__(self,list_children):
+        self.children = list_children
+    def evaluate(self,table):
+        while self.children[0].evaluate(table):
+            self.children[1].evaluate(table)
+
+
 class NoOp(Node):
     def __init__(self):
         self.value = None
@@ -161,6 +225,8 @@ class NoOp(Node):
     def evaluate(self,table):
         pass
     
+#-------------End of Nodes----------------
+
 class SymbolTable():
     def __init__(self):
         self.table = {}
@@ -193,19 +259,29 @@ class parser:
             parser.token.selectNext()
             return UnOp("-",[parser.factor()])
 
+        if parser.token.actual.stamp == "NOT":
+            parser.token.selectNext()
+            return UnOp("not",[parser.factor()])
+
+
         if parser.token.actual.stamp == "INT":
             node = IntVal(parser.token.actual.value)
             parser.token.selectNext()
-            return  node
+            return node
 
         if parser.token.actual.stamp == 'ID':
             node = Identifier(parser.token.actual.value)
             parser.token.selectNext()
             return node
 
+        if parser.token.actual.stamp == 'INPUT':
+            node = Node_Input(parser.token.actual.value)
+            parser.token.selectNext()
+            return node
+
         elif parser.token.actual.stamp == "OPEN":
             parser.token.selectNext()
-            result = parser.parseExpresion()
+            result = parser.parseExpression()
             if parser.token.actual.stamp != "CLOSE":
                 raise Exception("Error - Should have been a ), received: ", parser.token.actual.value)
                 
@@ -217,7 +293,7 @@ class parser:
     def term():
         result = parser.factor()
 
-        while parser.token.actual.stamp in {"MULTI","INT","DIVI"}:
+        while parser.token.actual.stamp in {"MULTI","INT","DIVI","AND"}:
             if parser.token.actual.stamp == "MULTI":
                 parser.token.selectNext()
                 result = BinOp("*",[result, parser.factor()])
@@ -228,15 +304,20 @@ class parser:
                 result = BinOp("/",[result, parser.factor()])
                 continue
 
+            elif parser.token.actual.stamp == "AND":
+                parser.token.selectNext()
+                result = BinOp("and",[result,parser.factor()])
+                continue
+
             parser.token.selectNext()
         return result
     
 
     @staticmethod
-    def parseExpresion():
+    def parseExpression():
         result = parser.term()
         
-        while parser.token.actual.stamp in {"PLUS","MINUS"}:
+        while parser.token.actual.stamp in {"PLUS","MINUS","OR"}:
 
             if parser.token.actual.stamp == "PLUS":
                 parser.token.selectNext()
@@ -247,11 +328,29 @@ class parser:
                 parser.token.selectNext()
                 result = BinOp("-",[result,parser.term()])
                 continue
+            
+            elif parser.token.actual.stamp == "OR":
+                parser.token.selectNext()
+                result = BinOp("or",[result,parser.term()])
+                continue
 
             parser.token.selectNext()
         
 
         return result
+
+    @staticmethod
+    def RelExpression():
+        result = parser.parseExpression()
+        if parser.token.actual.value == "=":
+            parser.token.selectNext()
+            return BinOp("=",[result,parser.parseExpression()])
+        if parser.token.actual.value == ">":
+            parser.token.selectNext()
+            return BinOp(">",[result,parser.parseExpression()])
+        if parser.token.actual.value == "<":
+            parser.token.selectNext()
+            return BinOp("<",[result,parser.parseExpression()])
 
     @staticmethod
     def Statement():
@@ -263,11 +362,42 @@ class parser:
             parser.token.selectNext()
             if parser.token.actual.stamp == "EQUAL":
                 parser.token.selectNext()
-                return Assignment("=",[Identifier(str_id),parser.parseExpresion()])
+                return Assignment("=",[Identifier(str_id),parser.parseExpression()])
         
         elif parser.token.actual.stamp == "PRINT":
             parser.token.selectNext()
-            return Print([parser.parseExpresion()])
+            return Print([parser.parseExpression()])
+
+        elif parser.token.actual.stamp == "WHILE":
+            parser.token.selectNext()
+            exp = [parser.RelExpression()]
+            if parser.token.actual.stamp != "LBREAK":
+                raise Exception("Error - while requires line break after expression, received: ", parser.token.actual.value)
+            exp.append(parser.Statements())
+            if parser.token.actual.stamp == "WFIN":
+                return Node_While(exp)
+            raise Exception("Error - while expression did not enconter WEnd, received: ", parser.token.actual.value)
+
+        elif parser.token.actual.stamp == "IF":
+            parser.token.selectNext()
+            exp = [parser.RelExpression()]
+            if parser.token.actual.stamp == "THEN":
+                parser.token.selectNext()
+                exp.append(parser.Statements())
+
+                if parser.token.actual.stamp == "ELSE":
+                    parser.token.selectNext()
+                    exp.append(parser.Statements())
+                parser.token.selectNext()
+
+                if parser.token.actual.stamp == "IF":
+                    parser.token.selectNext()
+                    return Node_if(exp)
+
+                raise Exception("Error - if expression did not enconter if after end, received: ", parser.token.actual.value)
+            raise Exception("Error - if expression did not enconter then, received: ", parser.token.actual.value)
+
+
 
         else:
             return NoOp()
@@ -276,27 +406,20 @@ class parser:
     @staticmethod
     def Statements():
         state_children = []
-        if parser.token.actual.stamp == "BEGIN":
+        state_children.append(parser.Statement())
+        while parser.token.actual.stamp == "LBREAK":
             parser.token.selectNext()
-            if parser.token.actual.stamp == "LBREAK":
-                parser.token.selectNext()
-                while parser.token.actual.stamp != "FIN":
-                    state_children.append(parser.Statement())
+            state_children.append(parser.Statement())
 
-                    if parser.token.actual.stamp != "LBREAK":
-                        raise Exception("Error - No line break after expression, received: ", parser.token.actual.value)
+            #if parser.token.actual.stamp != "LBREAK":
+            #    raise Exception("Error - No line break after expression, received: ", parser.token.actual.value)
 
-                    parser.token.selectNext()
-            
-            else:
-                raise Exception("Error - No line break after Begin, received: ", parser.token.actual.value)
+            #parser.token.selectNext()
 
-
-        else:
-            raise Exception("Error - Dosent start with Begin, recieved ", parser.token.actual.stamp)
-
-        parser.token.selectNext()
+        #parser.token.selectNext()
         return Statements('statements', state_children)
+
+
 
 
     @staticmethod
@@ -308,8 +431,9 @@ class parser:
         return ast 
 
 if __name__ == '__main__':
-    #sys.argv[1]
-    with open(sys.argv[1], "r") as in_file:
+    code = sys.argv[1]
+    #code = "code.vbs"
+    with open(code, "r") as in_file:
             code = in_file.read()
 
     code += "\n"
