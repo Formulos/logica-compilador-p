@@ -431,8 +431,8 @@ class parser:
         return ast 
 
 if __name__ == '__main__':
-    #code = sys.argv[1]
-    code = "code.vbs"
+    code = sys.argv[1]
+    #code = "code.vbs"
     with open(code, "r") as in_file:
             code = in_file.read()
 
