@@ -371,6 +371,8 @@ class parser:
         elif parser.token.actual.stamp == "WHILE":
             parser.token.selectNext()
             exp = [parser.RelExpression()]
+            if parser.token.actual.stamp != "LBREAK":
+                raise Exception("Error - while requires line break after expression, received: ", parser.token.actual.value)
             exp.append(parser.Statements())
             if parser.token.actual.stamp == "WFIN":
                 return Node_While(exp)
@@ -386,7 +388,7 @@ class parser:
                 if parser.token.actual.stamp == "ELSE":
                     parser.token.selectNext()
                     exp.append(parser.Statements())
-                    parser.token.selectNext()
+                parser.token.selectNext()
 
                 if parser.token.actual.stamp == "IF":
                     parser.token.selectNext()
