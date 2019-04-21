@@ -230,9 +230,9 @@ class Node_While(Node): # reserved string
 
 class VarDec(Node):
     def __init__(self,list_children):
-        self.children = []
+        self.children = list_children
     def evaluate(self,table):
-        table.setter(self.children[0],[None,self.children[1].evaluate(table)])
+        table.declare(self.children[0].value,[None,self.children[1].evaluate(table)])
 
 class Node_type(Node):
     def __init__(self,value):
@@ -258,11 +258,17 @@ class SymbolTable():
 
     def getter(self,key):
         return self.table[key]
-
-    def setter(self,key,value):
+    
+    def declare(self,key,value):
         if key in self.reserved_set:
             raise Exception("Error - in setter, the value: ",key,"is a reserved key")
         self.table[key] = value
+
+    def setter(self,key,value):
+        if key in self.table:
+            self.table[key] = value
+        else:
+            raise Exception("Error - var: ",key,"was not declared using dim")
 
 class Statements(Node):
     def __init__(self, value, children):
@@ -392,12 +398,14 @@ class parser:
         elif parser.token.actual.stamp == "DIM":
             parser.token.selectNext()
             if parser.token.actual.stamp == "ID":
-                var = IntVal(parser.token.actual.value)
+                var = Identifier(parser.token.actual.value)
                 parser.token.selectNext()
                 if parser.token.actual.stamp == "AS":
                     parser.token.selectNext()
                     if parser.token.actual.stamp == "TYPE":
-                        return VarDec([var,Node_type(parser.token.actual.value)])
+                        var_type = parser.token.actual.value
+                        parser.token.selectNext()
+                        return VarDec([var,Node_type(var_type)])
         
         elif parser.token.actual.stamp == "PRINT":
             parser.token.selectNext()
