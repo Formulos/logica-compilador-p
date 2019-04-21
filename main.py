@@ -26,7 +26,7 @@ class PrePro():
                 in_coment = False
             i+= 1
             
-        return code
+        return code.lower()
             
 
 class tokenizer():
@@ -85,29 +85,31 @@ class tokenizer():
                 string += self.origin[self.position]
                 self.position += 1
             if string == "print":
-                self.actual = token("PRINT", string) # s = special
-            elif string == "Begin":
-                self.actual = token("BEGIN", string) # s = special
-            elif string == "End":
-                self.actual = token("FIN", string) # s = special
-            elif string == "WEnd":
-                self.actual = token("WFIN", string) # s = special
+                self.actual = token("PRINT", string)
+            elif string == "sub":
+                self.actual = token("sub", string)
+            elif string == "main":
+                self.actual = token("main", string)
+            elif string == "end":
+                self.actual = token("FIN", string)
+            elif string == "wend":
+                self.actual = token("WFIN", string)
             elif string == "if":
-                self.actual = token("IF", string) # s = special
+                self.actual = token("IF", string)
             elif string == "else":
-                self.actual = token("ELSE", string) # s = special
+                self.actual = token("ELSE", string)
             elif string == "while":
-                self.actual = token("WHILE", string) # s = special
+                self.actual = token("WHILE", string)
             elif string == "and":
-                self.actual = token("AND", string) # s = special
+                self.actual = token("AND", string)
             elif string == "or":
-                self.actual = token("OR", string) # s = special
+                self.actual = token("OR", string)
             elif string == "not":
-                self.actual = token("NOT", string) # s = special
+                self.actual = token("NOT", string)
             elif string == "then":
-                self.actual = token("THEN", string) # s = special
+                self.actual = token("THEN", string)
             elif string == "input":
-                self.actual = token("INPUT", string) # s = special
+                self.actual = token("INPUT", string)
             else:
                 self.actual = token("ID", string)
 
@@ -189,7 +191,7 @@ class Assignment(Node):
     def __init__(self,value,list_children):
         self.value = value
         self.children = list_children
-        if len(self.children) != 2: raise Exception("Error - in Assignment, Assignment needs two children, children: ",self.children)
+        if len(self.children) != 2: raise Exception("Error - in Node_while, Node_while cant have more than one child, children: ",self.children)
     def evaluate(self,table):
         table.setter(self.children[0].value,self.children[1].evaluate(table))
 
@@ -213,6 +215,7 @@ class Node_if(Node): # reserved string
 class Node_While(Node): # reserved string
     def __init__(self,list_children):
         self.children = list_children
+        if len(self.children) != 2: raise Exception("Error - in Unop, UnOp cant have more than one child, children: ",self.children)
     def evaluate(self,table):
         while self.children[0].evaluate(table):
             self.children[1].evaluate(table)
@@ -223,7 +226,7 @@ class NoOp(Node):
         self.value = None
         self.children = []
     def evaluate(self,table):
-        pass
+        return None
     
 #-------------End of Nodes----------------
 
@@ -354,10 +357,8 @@ class parser:
 
     @staticmethod
     def Statement():
-        if parser.token.actual.stamp == "BEGIN":
-            return parser.Statements()
 
-        elif parser.token.actual.stamp == "ID":
+        if parser.token.actual.stamp == "ID":
             str_id = parser.token.actual.value
             parser.token.selectNext()
             if parser.token.actual.stamp == "EQUAL":
@@ -373,21 +374,25 @@ class parser:
             exp = [parser.RelExpression()]
             if parser.token.actual.stamp != "LBREAK":
                 raise Exception("Error - while requires line break after expression, received: ", parser.token.actual.value)
-            exp.append(parser.Statements())
+
+
+            exp.append(parser.Statment_loop())
+
             if parser.token.actual.stamp == "WFIN":
+                parser.token.selectNext()
                 return Node_While(exp)
-            raise Exception("Error - while expression did not enconter WEnd, received: ", parser.token.actual.value)
+            raise Exception("Error - while expression did not enconter wend, received: ", parser.token.actual.value)
 
         elif parser.token.actual.stamp == "IF":
             parser.token.selectNext()
             exp = [parser.RelExpression()]
             if parser.token.actual.stamp == "THEN":
                 parser.token.selectNext()
-                exp.append(parser.Statements())
+                exp.append(parser.Statement())
 
                 if parser.token.actual.stamp == "ELSE":
                     parser.token.selectNext()
-                    exp.append(parser.Statements())
+                    exp.append(parser.Statement())
                 parser.token.selectNext()
 
                 if parser.token.actual.stamp == "IF":
@@ -402,22 +407,36 @@ class parser:
         else:
             return NoOp()
 
-
     @staticmethod
-    def Statements():
+    def Statment_loop():
         state_children = []
         state_children.append(parser.Statement())
         while parser.token.actual.stamp == "LBREAK":
             parser.token.selectNext()
             state_children.append(parser.Statement())
-
-            #if parser.token.actual.stamp != "LBREAK":
-            #    raise Exception("Error - No line break after expression, received: ", parser.token.actual.value)
-
-            #parser.token.selectNext()
-
-        #parser.token.selectNext()
         return Statements('statements', state_children)
+
+    @staticmethod
+    def Program():
+       
+        state_children = []
+
+        for i in ["sub","main","(",")","\n"] : # better than 5 ifs
+            if parser.token.actual.value != i:
+                raise Exception("Error - wrong order at beginning expected:",i,"received:", parser.token.actual.value)
+            parser.token.selectNext()
+
+        state_children.append(parser.Statement())
+        while parser.token.actual.stamp == "LBREAK":
+            parser.token.selectNext()
+            state_children.append(parser.Statement())
+
+        if  parser.token.actual.value == "end":
+            parser.token.selectNext()
+            if  parser.token.actual.value == "sub":
+                return Statements('statements', state_children)
+            raise Exception("Error - wrong order at ending expected:","sub","received:", parser.token.actual.value)
+        raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
 
 
 
@@ -427,12 +446,12 @@ class parser:
         code = PrePro.filter(code)
         parser.token = tokenizer(code)
         parser.token.selectNext()
-        ast = parser.Statements()
+        ast = parser.Program()
         return ast 
 
 if __name__ == '__main__':
-    code = sys.argv[1]
-    #code = "code.vbs"
+    #code = sys.argv[1]
+    code = "code.vbs"
     with open(code, "r") as in_file:
             code = in_file.read()
 
