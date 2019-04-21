@@ -110,6 +110,14 @@ class tokenizer():
                 self.actual = token("THEN", string)
             elif string == "input":
                 self.actual = token("INPUT", string)
+            elif string == "dim":
+                self.actual = token("DIM", string)
+            elif string == "as":
+                self.actual = token("AS", string)
+            elif string == "integer":
+                self.actual = token("TYPE", string)
+            elif string == "boolean":
+                self.actual = token("TYPE", string)
             else:
                 self.actual = token("ID", string)
 
@@ -220,6 +228,19 @@ class Node_While(Node): # reserved string
         while self.children[0].evaluate(table):
             self.children[1].evaluate(table)
 
+class VarDec(Node):
+    def __init__(self,list_children):
+        self.children = []
+    def evaluate(self,table):
+        table.setter(self.children[0],[None,self.children[1].evaluate(table)])
+
+class Node_type(Node):
+    def __init__(self,value):
+        self.value = value
+        if value not in {"integer","boolean"}:
+            raise Exception("Error - unreconized type: ",self.value)
+    def evaluate(self,table):
+        return self.value
 
 class NoOp(Node):
     def __init__(self):
@@ -233,11 +254,14 @@ class NoOp(Node):
 class SymbolTable():
     def __init__(self):
         self.table = {}
+        self.reserved_set = {"sub","main","end","print","dim","if","else","then","while","end","wend"}
 
     def getter(self,key):
         return self.table[key]
 
     def setter(self,key,value):
+        if key in self.reserved_set:
+            raise Exception("Error - in setter, the value: ",key,"is a reserved key")
         self.table[key] = value
 
 class Statements(Node):
@@ -365,6 +389,16 @@ class parser:
                 parser.token.selectNext()
                 return Assignment("=",[Identifier(str_id),parser.parseExpression()])
         
+        elif parser.token.actual.stamp == "DIM":
+            parser.token.selectNext()
+            if parser.token.actual.stamp == "ID":
+                var = IntVal(parser.token.actual.value)
+                parser.token.selectNext()
+                if parser.token.actual.stamp == "AS":
+                    parser.token.selectNext()
+                    if parser.token.actual.stamp == "TYPE":
+                        return VarDec([var,Node_type(parser.token.actual.value)])
+        
         elif parser.token.actual.stamp == "PRINT":
             parser.token.selectNext()
             return Print([parser.parseExpression()])
@@ -388,11 +422,18 @@ class parser:
             exp = [parser.RelExpression()]
             if parser.token.actual.stamp == "THEN":
                 parser.token.selectNext()
-                exp.append(parser.Statement())
+                if parser.token.actual.stamp != "LBREAK":
+                    raise Exception("Error - while requires line break after expression, received: ", parser.token.actual.value)
+                parser.token.selectNext()
+                exp.append(parser.Statment_loop())
 
                 if parser.token.actual.stamp == "ELSE":
                     parser.token.selectNext()
-                    exp.append(parser.Statement())
+                    if parser.token.actual.stamp != "LBREAK":
+                        raise Exception("Error - while requires line break after expression, received: ", parser.token.actual.value)
+                    parser.token.selectNext()
+                    exp.append(parser.Statment_loop())
+
                 parser.token.selectNext()
 
                 if parser.token.actual.stamp == "IF":
