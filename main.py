@@ -118,6 +118,10 @@ class tokenizer():
                 self.actual = token("TYPE", string)
             elif string == "boolean":
                 self.actual = token("TYPE", string)
+            elif string == "true":
+                self.actual = token("BOOL", string)
+            elif string == "flase":
+                self.actual = token("BOOL", string)
             else:
                 self.actual = token("ID", string)
 
@@ -179,7 +183,12 @@ class UnOp(Node):
 class IntVal(Node):
     def __init__(self,value):
         self.value = value
-        self.children = []
+    def evaluate(self,table):
+        return self.value
+
+class BoolVal(Node):
+    def __init__(self,value):
+        self.value = value
     def evaluate(self,table):
         return self.value
 
@@ -257,7 +266,7 @@ class SymbolTable():
         self.reserved_set = {"sub","main","end","print","dim","if","else","then","while","end","wend"}
 
     def getter(self,key):
-        return self.table[key]
+        return tuple(self.table[key])
     
     def declare(self,key,value):
         if key in self.reserved_set:
@@ -266,7 +275,7 @@ class SymbolTable():
 
     def setter(self,key,value):
         if key in self.table:
-            self.table[key] = value
+            self.table[key][0] = value
         else:
             raise Exception("Error - var: ",key,"was not declared using dim")
 
@@ -296,9 +305,13 @@ class parser:
             parser.token.selectNext()
             return UnOp("not",[parser.factor()])
 
-
         if parser.token.actual.stamp == "INT":
             node = IntVal(parser.token.actual.value)
+            parser.token.selectNext()
+            return node
+
+        if parser.token.actual.stamp == "BOOL":
+            node = BoolVal(parser.token.actual.value)
             parser.token.selectNext()
             return node
 
