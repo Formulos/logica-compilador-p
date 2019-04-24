@@ -194,6 +194,7 @@ class BinOp(Node):
                     return (var1 or var2)
         if self.value == "and":
                     return (var1 and var2)
+        raise Exception("Error - in Binop, No operation possible (aka something went therible wrong), children: ",self.children," value: ",var1)
 
 class UnOp(Node):
     def __init__(self,value,list_children):
@@ -201,12 +202,26 @@ class UnOp(Node):
         self.children = list_children
         if len(self.children) != 1: raise Exception("Error - in Unop, UnOp cant have more than one child, children: ",self.children)
     def evaluate(self,table):
-        if self.value == "+":
-            return self.children[0].evaluate(table)
-        if self.value == "-":
-            return self.children[0].evaluate(table) * -1
-        if self.value == "not":
-            return (not self.children[0].evaluate(table))
+        var1=self.children[0].evaluate(table)
+        if type(var1) is tuple:#check if var type match
+            vtype1 = var1[1]
+            var1 = var1[0]
+        else:
+            vtype1 = type(var1)
+            if vtype1 is int:
+                vtype1 = 'integer'
+            if vtype1 is bool:
+                vtype1 = 'boolean'
+
+        if vtype1 == 'integer':
+            if self.value == "+":
+                return var1
+            if self.value == "-":
+                return var1 * -1
+        if vtype1 == 'boolean':
+            if self.value == "not":
+                return (not var1)
+        raise Exception("Error - in Unop, No operation possible: children: ",self.children," value: ",var1)
 
 class IntVal(Node):
     def __init__(self,value):
@@ -244,8 +259,18 @@ class Print(Node): # reserved string
     def __init__(self,list_children):
         self.children = list_children
     def evaluate(self,table):
-        tmp = self.children[0].evaluate(table)
-        print(tmp)
+        var1=self.children[0].evaluate(table)
+        if type(var1) is tuple:#check if var type match
+            vtype1 = var1[1]
+            var1 = var1[0]
+        else:
+            vtype1 = type(var1)
+            if vtype1 is int:
+                vtype1 = 'integer'
+            if vtype1 is bool:
+                vtype1 = 'boolean'
+
+        print(var1)
 
 class Node_if(Node): # reserved string
     def __init__(self,list_children):
