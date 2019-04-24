@@ -119,9 +119,9 @@ class tokenizer():
             elif string == "boolean":
                 self.actual = token("TYPE", string)
             elif string == "true":
-                self.actual = token("BOOL", string)
-            elif string == "flase":
-                self.actual = token("BOOL", string)
+                self.actual = token("TRUE", string)
+            elif string == "false":
+                self.actual = token("FALSE", string)
             else:
                 self.actual = token("ID", string)
 
@@ -148,24 +148,52 @@ class BinOp(Node):
         self.children = list_children
         if len(self.children) != 2: raise Exception("Error - in BinOp, BinOp needs two children, children: ",self.children)
     def evaluate(self,table):
+        var1=self.children[0].evaluate(table)
+        var2=self.children[1].evaluate(table)
+        if type(var1) is tuple:#check if var type match
+            vtype1 = var1[1]
+            var1 = var1[0]
+        else:
+            vtype1 = type(var1)
+            if vtype1 is int:
+                vtype1 = 'integer'
+            if vtype1 is bool:
+                vtype1 = 'boolean'
+
+        if type(var2) is tuple:
+            vtype2 = var2[1]
+            var2 = var2[0]
+        else:
+            vtype2 = type(var2)
+            if vtype2 is int:
+                vtype2 = 'integer'
+            if vtype2 is bool:
+                vtype2 = 'boolean'
+
+        if vtype1 != vtype2:
+             raise Exception("Error - in BinOp, differente var types ",vtype1,vtype2)
+
+        # integerer operetors
         if self.value == "+":
-            return self.children[0].evaluate(table) + self.children[1].evaluate(table)
+            return var1 + var2
         if self.value == "-":
-            return self.children[0].evaluate(table) - self.children[1].evaluate(table)
+            return var1 - var2
         if self.value == "*":
-            return self.children[0].evaluate(table) * self.children[1].evaluate(table)
+            return var1 * var2
         if self.value == "/":
-            return self.children[0].evaluate(table) / self.children[1].evaluate(table)
+            return var1 / var2
         if self.value == "=":
-            return (self.children[0].evaluate(table) == self.children[1].evaluate(table))
+            return (var1 == var2)
         if self.value == ">":
-            return (self.children[0].evaluate(table) > self.children[1].evaluate(table))
+            return (var1 > var2)
         if self.value == "<":
-            return (self.children[0].evaluate(table) < self.children[1].evaluate(table))
+            return (var1 < var2)
+        
+        #bolean operators
         if self.value == "or":
-                    return (self.children[0].evaluate(table) or self.children[1].evaluate(table))
+                    return (var1 or var2)
         if self.value == "and":
-                    return (self.children[0].evaluate(table) and self.children[1].evaluate(table))
+                    return (var1 and var2)
 
 class UnOp(Node):
     def __init__(self,value,list_children):
@@ -310,8 +338,13 @@ class parser:
             parser.token.selectNext()
             return node
 
-        if parser.token.actual.stamp == "BOOL":
-            node = BoolVal(parser.token.actual.value)
+        if parser.token.actual.stamp == "TRUE":
+            node = BoolVal(True)
+            parser.token.selectNext()
+            return node
+
+        if parser.token.actual.stamp == "FALSE":
+            node = BoolVal(False)
             parser.token.selectNext()
             return node
 
