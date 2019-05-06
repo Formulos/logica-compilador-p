@@ -1,6 +1,7 @@
-Begin
-print (not 0)
-if 0=0 then Begin 
-print (1) 
-End if
-End
+sub main()
+dim a as boolean
+a = 1
+a = a+1
+print a
+
+end sub
