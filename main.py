@@ -139,8 +139,14 @@ class Node():
     def __init__(self, varient, list_children):
         self.value = varient
         self.children = list_children
+        self.i = 0
     def evaluate(self, table):
         raise Exception("Error - in abstract class, evaluate was not overwriten")
+        
+    @staticmethod
+    def newid(self):
+        self.i += self.i
+        return self.i
 
 class BinOp(Node):
     def __init__(self,value,list_children):
