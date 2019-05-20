@@ -132,10 +132,34 @@ class tokenizer():
                 self.position += 1
             self.actual = token("INT", int(number))
 
+#-------- Assemble Writer -----------
+class assemble():
+    @staticmethod
+    def begin():
+        with open("write_test.txt","w+") as out:
+            with open("head.txt","r") as head:
+                for line in head:
+                    out.write(line)
+
+    @staticmethod
+    def write(code):
+        with open("write_test.txt","a") as out:
+            out.write(code)
+            out.write("\n")
+    
+    @staticmethod
+    def end():
+        with open("write_test.txt","a") as out:
+            with open("end.txt","r") as file_end:
+                for line in file_end:
+                    out.write(line)
+
+
 #-------- Nodes -----------
 
 """This is a abstract class"""
 class Node():
+    i = 0
     def __init__(self, varient, list_children):
         self.value = varient
         self.children = list_children
@@ -144,14 +168,15 @@ class Node():
         raise Exception("Error - in abstract class, evaluate was not overwriten")
         
     @staticmethod
-    def newid(self):
-        self.i += self.i
-        return self.i
+    def newid():
+        Node.i += 1
+        return Node.i
 
 class BinOp(Node):
     def __init__(self,value,list_children):
         self.value = value
         self.children = list_children
+        self.id = Node.newid()
         if len(self.children) != 2: raise Exception("Error - in BinOp, BinOp needs two children, children: ",self.children)
     def evaluate(self,table):
         var1=self.children[0].evaluate(table)
@@ -206,6 +231,7 @@ class UnOp(Node):
     def __init__(self,value,list_children):
         self.value = value
         self.children = list_children
+        self.id = Node.newid()
         if len(self.children) != 1: raise Exception("Error - in Unop, UnOp cant have more than one child, children: ",self.children)
     def evaluate(self,table):
         var1=self.children[0].evaluate(table)
@@ -232,24 +258,28 @@ class UnOp(Node):
 class IntVal(Node):
     def __init__(self,value):
         self.value = value
+        self.id = Node.newid()
     def evaluate(self,table):
-        return self.value
+        assemble.write("MOV EBX, {}".format(self.value))
 
 class BoolVal(Node):
     def __init__(self,value):
         self.value = value
+        self.id = Node.newid()
     def evaluate(self,table):
         return self.value
 
 class Identifier(Node):
     def __init__(self,value):
         self.value = value
+        self.id = Node.newid()
     def evaluate(self,table):
         return table.getter(self.value)
 
 class Node_Input(Node):
     def __init__(self,value):
         self.value = value
+        self.id = Node.newid()
     def evaluate(self,table):
         return int(input())
 
@@ -257,23 +287,30 @@ class Assignment(Node):
     def __init__(self,value,list_children):
         self.value = value
         self.children = list_children
+        self.id = Node.newid()
         if len(self.children) != 2: raise Exception("Error - in Node_while, Node_while cant have more than one child, children: ",self.children)
     def evaluate(self,table):
-        table.setter(self.children[0].value,self.children[1].evaluate(table))
+        self.children[1].evaluate(table)
+        assemble.write("MOV [EBP-{}], EBX".format(table.getter(self.children[0].value)[2]))
 
 class Print(Node): # reserved string
     def __init__(self,list_children):
         self.children = list_children
+        self.id = Node.newid()
     def evaluate(self,table):
         var = self.children[0].evaluate(table)
         if type(var) is tuple:#check if var type match
             var = var[0]
-        print(var)
+
+        assemble.write("PUSH EBX")
+        assemble.write("CALL print")
+        assemble.write("POP EBX")
 
 
 class Node_if(Node): # reserved string
     def __init__(self,list_children):
         self.children = list_children
+        self.id = Node.newid()
     def evaluate(self,table):
         if self.children[0].evaluate(table):
             return self.children[1].evaluate(table)
@@ -284,6 +321,7 @@ class Node_if(Node): # reserved string
 class Node_While(Node): # reserved string
     def __init__(self,list_children):
         self.children = list_children
+        self.id = Node.newid()
         if len(self.children) != 2: raise Exception("Error - in Unop, UnOp cant have more than one child, children: ",self.children)
     def evaluate(self,table):
         while self.children[0].evaluate(table):
@@ -292,12 +330,15 @@ class Node_While(Node): # reserved string
 class VarDec(Node):
     def __init__(self,list_children):
         self.children = list_children
+        self.id = Node.newid()
     def evaluate(self,table):
         table.declare(self.children[0].value,[None,self.children[1].evaluate(table)])
+        assemble.write("PUSH DWORD 0")
 
 class Node_type(Node):
     def __init__(self,value):
         self.value = value
+        self.id = Node.newid()
         if value not in {"integer","boolean"}:
             raise Exception("Error - unreconized type: ",self.value)
     def evaluate(self,table):
@@ -307,6 +348,7 @@ class NoOp(Node):
     def __init__(self):
         self.value = None
         self.children = []
+        self.id = Node.newid()
     def evaluate(self,table):
         return None
     
@@ -316,16 +358,20 @@ class SymbolTable():
     def __init__(self):
         self.table = {}
         self.reserved_set = {"sub","main","end","print","dim","if","else","then","while","end","wend"}
+        self.bits = 0
 
     def getter(self,key):
         if key in self.table:
-            return tuple(self.table[key])
+            tmp = self.table[key]
+            tmp.append(self.bits)
+            return tuple(tmp)
         raise Exception("Error - var: ",key,"was not declared using dim")
     
     def declare(self,key,value):
         if key in self.reserved_set:
             raise Exception("Error - in setter, the value: ",key,"is a reserved key")
         self.table[key] = value
+        self.bits += 4
 
     def setter(self,key,value):
         if key in self.table:
@@ -572,12 +618,14 @@ class parser:
         return ast 
 
 if __name__ == '__main__':
-    code = sys.argv[1]
-    #code = "code.vbs"
+    #code = sys.argv[1]
+    code = "code.vbs"
     with open(code, "r") as in_file:
             code = in_file.read()
 
     code += "\n"
     table = SymbolTable()
+    assemble.begin()
     ast = parser.run(code)
     ast.evaluate(table)
+    assemble.end()
