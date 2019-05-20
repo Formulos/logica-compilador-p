@@ -81,7 +81,7 @@ class tokenizer():
 
         elif self.origin[self.position].isalpha():
             string = ""
-            while (self.position < len(self.origin)) and (self.origin[self.position].isalpha()):
+            while (self.position < len(self.origin)) and ((self.origin[self.position].isalpha()) or (self.origin[self.position] == "_")):
                 string += self.origin[self.position]
                 self.position += 1
             if string == "print":
@@ -251,7 +251,7 @@ class Node_Input(Node):
     def __init__(self,value):
         self.value = value
     def evaluate(self,table):
-        return input()
+        return int(input())
 
 class Assignment(Node):
     def __init__(self,value,list_children):
@@ -265,18 +265,11 @@ class Print(Node): # reserved string
     def __init__(self,list_children):
         self.children = list_children
     def evaluate(self,table):
-        var1=self.children[0].evaluate(table)
-        if type(var1) is tuple:#check if var type match
-            vtype1 = var1[1]
-            var1 = var1[0]
-        else:
-            vtype1 = type(var1)
-            if vtype1 is int:
-                vtype1 = 'integer'
-            if vtype1 is bool:
-                vtype1 = 'boolean'
+        var = self.children[0].evaluate(table)
+        if type(var) is tuple:#check if var type match
+            var = var[0]
+        print(var)
 
-        print(var1)
 
 class Node_if(Node): # reserved string
     def __init__(self,list_children):
@@ -325,7 +318,9 @@ class SymbolTable():
         self.reserved_set = {"sub","main","end","print","dim","if","else","then","while","end","wend"}
 
     def getter(self,key):
-        return tuple(self.table[key])
+        if key in self.table:
+            return tuple(self.table[key])
+        raise Exception("Error - var: ",key,"was not declared using dim")
     
     def declare(self,key,value):
         if key in self.reserved_set:
@@ -391,7 +386,7 @@ class parser:
 
         elif parser.token.actual.stamp == "OPEN":
             parser.token.selectNext()
-            result = parser.parseExpression()
+            result = parser.RelExpression()
             if parser.token.actual.stamp != "CLOSE":
                 raise Exception("Error - Should have been a ), received: ", parser.token.actual.value)
                 
@@ -461,6 +456,7 @@ class parser:
         if parser.token.actual.value == "<":
             parser.token.selectNext()
             return BinOp("<",[result,parser.parseExpression()])
+        return result
 
     @staticmethod
     def Statement():
@@ -576,8 +572,8 @@ class parser:
         return ast 
 
 if __name__ == '__main__':
-    #code = sys.argv[1]
-    code = "code.vbs"
+    code = sys.argv[1]
+    #code = "code.vbs"
     with open(code, "r") as in_file:
             code = in_file.read()
 
