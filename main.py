@@ -136,20 +136,20 @@ class tokenizer():
 class assemble():
     @staticmethod
     def begin():
-        with open("write_test.txt","w+") as out:
+        with open("program.asm","w+") as out:
             with open("head.txt","r") as head:
                 for line in head:
                     out.write(line)
 
     @staticmethod
     def write(code):
-        with open("write_test.txt","a") as out:
+        with open("program.asm","a") as out:
             out.write(code)
             out.write("\n")
     
     @staticmethod
     def end():
-        with open("write_test.txt","a") as out:
+        with open("program.asm","a") as out:
             with open("end.txt","r") as file_end:
                 for line in file_end:
                     out.write(line)
@@ -180,7 +180,9 @@ class BinOp(Node):
         if len(self.children) != 2: raise Exception("Error - in BinOp, BinOp needs two children, children: ",self.children)
     def evaluate(self,table):
         var1=self.children[0].evaluate(table)
+        assemble.write("PUSH EBX")
         var2=self.children[1].evaluate(table)
+        assemble.write("POP EAX")
         if type(var1) is tuple:#check if var type match
             vtype1 = var1[1]
             var1 = var1[0]
@@ -205,27 +207,37 @@ class BinOp(Node):
              raise Exception("Error - in BinOp, differente var types ",vtype1,vtype2)
 
         # integerer operetors
-        if self.value == "+":
-            return var1 + var2
-        if self.value == "-":
-            return var1 - var2
-        if self.value == "*":
-            return var1 * var2
-        if self.value == "/":
-            return var1 / var2
-        if self.value == "=":
-            return (var1 == var2)
-        if self.value == ">":
-            return (var1 > var2)
-        if self.value == "<":
-            return (var1 < var2)
+        elif self.value == "+":
+            assemble.write("ADD EAX, EBX")
+            assemble.write("MOV EBX, EAX")
+        elif self.value == "-":
+            assemble.write("SUB EAX, EBX")
+            assemble.write("MOV EBX, EAX")
+        elif self.value == "*":
+            assemble.write("IMUL EBX")
+            assemble.write("MOV EBX, EAX")
+        elif self.value == "/":
+            assemble.write("IDIV EBX")
+            assemble.write("MOV EBX, EAX")
+        elif self.value == "=":
+            assemble.write("CMP EAX, EBX")
+            assemble.write("CALL binop_je")
+        elif self.value == ">":
+            assemble.write("CMP EAX, EBX")
+            assemble.write("CALL binop_jg")
+        elif self.value == "<":
+            assemble.write("CMP EAX, EBX")
+            assemble.write("CALL binop_jl")
         
         #bolean operators
-        if self.value == "or":
-                    return (var1 or var2)
-        if self.value == "and":
-                    return (var1 and var2)
-        raise Exception("Error - in Binop, No operation possible (aka something went therible wrong), children: ",self.children," value: ",var1)
+        elif self.value == "or":
+            assemble.write("OR EAX, EBX")
+            assemble.write("MOV EBX, EAX")
+        elif self.value == "and":
+            assemble.write("AND EAX, EBX")
+            assemble.write("MOV EBX, EAX")
+        else:
+            raise Exception("Error - in Binop, No operation possible (aka something went terible wrong), children: ",self.children," value: ",var1)
 
 class UnOp(Node):
     def __init__(self,value,list_children):
@@ -316,10 +328,20 @@ class Node_if(Node): # reserved string
         self.children = list_children
         self.id = Node.newid()
     def evaluate(self,table):
-        if self.children[0].evaluate(table):
-            return self.children[1].evaluate(table)
-        elif len(self.children) == 3: # this if contains a else
-            return self.children[2].evaluate(table)
+        self.children[0].evaluate(table)
+        assemble.write("CMP EBX, True")
+        assemble.write("JE if_{}".format(self.id))
+
+        if len(self.children) == 3: # this if contains a else
+            self.children[2].evaluate(table)
+        
+
+        assemble.write("JMP EXIT_{}".format(self.id))
+        assemble.write("if_{}:".format(self.id))
+
+        self.children[1].evaluate(table)
+        assemble.write("EXIT_{}:".format(self.id))
+
         return None
 
 class Node_While(Node): # reserved string
@@ -328,8 +350,16 @@ class Node_While(Node): # reserved string
         self.id = Node.newid()
         if len(self.children) != 2: raise Exception("Error - in Unop, UnOp cant have more than one child, children: ",self.children)
     def evaluate(self,table):
-        while self.children[0].evaluate(table):
-            self.children[1].evaluate(table)
+
+        assemble.write("LOOP_{}:".format(self.id))
+        self.children[0].evaluate(table)
+        
+        assemble.write("CMP EBX, False")
+        assemble.write("JE EXIT_{}".format(self.id))
+
+        self.children[1].evaluate(table)
+        assemble.write("JMP LOOP_{}".format(self.id))
+        assemble.write("EXIT_{}:".format(self.id))
 
 class VarDec(Node):
     def __init__(self,list_children):
@@ -366,16 +396,15 @@ class SymbolTable():
 
     def getter(self,key):
         if key in self.table:
-            tmp = self.table[key]
-            tmp.append(self.bits)
-            return tuple(tmp)
+            return tuple(self.table[key])
         raise Exception("Error - var: ",key,"was not declared using dim")
     
     def declare(self,key,value):
         if key in self.reserved_set:
             raise Exception("Error - in setter, the value: ",key,"is a reserved key")
-        self.table[key] = value
         self.bits += 4
+        value.append(self.bits)
+        self.table[key] = value
 
     def setter(self,key,value):
         if key in self.table:
@@ -622,8 +651,8 @@ class parser:
         return ast 
 
 if __name__ == '__main__':
-    #code = sys.argv[1]
-    code = "code.vbs"
+    code = sys.argv[1]
+    #code = "code.vbs"
     with open(code, "r") as in_file:
             code = in_file.read()
 

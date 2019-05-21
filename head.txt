@@ -76,6 +76,6 @@ binop_exit:
   RET
 
 _start:
-PUSH EBP ; guarda o b a se p oi n t e r
+PUSH EBP ; guarda o base pointer
 
 MOV EBP, ESP ; estabelece um novo pointer

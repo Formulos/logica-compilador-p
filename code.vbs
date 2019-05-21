@@ -1,5 +1,5 @@
 Sub Main()
-Dim i as Integer
-i = 9
-print i
+if 1 = 1 then
+print 1
+end if
 End Sub
