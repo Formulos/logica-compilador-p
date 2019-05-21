@@ -247,12 +247,16 @@ class UnOp(Node):
 
         if vtype1 == 'integer':
             if self.value == "+":
-                return var1
+                assemble.write("MOV EAX, 1")
+                assemble.write("IMUL EBX")
+                assemble.write("MOV EBX, EAX")
             if self.value == "-":
-                return var1 * -1
+                assemble.write("MOV EAX, -1")
+                assemble.write("IMUL EBX")
+                assemble.write("MOV EBX, EAX")
         if vtype1 == 'boolean':
             if self.value == "not":
-                return (not var1)
+                assemble.write("NEG EBX")
         raise Exception("Error - in Unop, No operation possible: children: ",self.children," value: ",var1)
 
 class IntVal(Node):
@@ -267,21 +271,21 @@ class BoolVal(Node):
         self.value = value
         self.id = Node.newid()
     def evaluate(self,table):
-        return self.value
+        assemble.write("MOV EBX, {}".format(self.value))
 
 class Identifier(Node):
     def __init__(self,value):
         self.value = value
         self.id = Node.newid()
     def evaluate(self,table):
-        return table.getter(self.value)
+        assemble.write("MOV EBX, [EBP-{}]".format(table.getter(self.value)[2]))
 
 class Node_Input(Node):
     def __init__(self,value):
         self.value = value
         self.id = Node.newid()
     def evaluate(self,table):
-        return int(input())
+        sys.exit("assembler + input = not good")
 
 class Assignment(Node):
     def __init__(self,value,list_children):
@@ -350,7 +354,7 @@ class NoOp(Node):
         self.children = []
         self.id = Node.newid()
     def evaluate(self,table):
-        return None
+        pass
     
 #-------------End of Nodes----------------
 
