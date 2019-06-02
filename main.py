@@ -33,13 +33,16 @@ class tokenizer():
     def __init__(self, origin):
         self.origin = origin
         self.position = 0
-        self.actual = token("FIN", "FIN")
+        self.actual = None
 
     def selectNext(self):
         while (self.position < len(self.origin)) and (self.origin[self.position] == " "):
             self.position += 1
 
-        if self.origin[self.position] == "=":
+        if self.position >= len(self.origin):
+            self.actual = token("EOF", "EOF")
+
+        elif self.origin[self.position] == "=":
             self.actual = token("EQUAL", "=")
             self.position += 1
 
@@ -87,9 +90,9 @@ class tokenizer():
             if string == "print":
                 self.actual = token("PRINT", string)
             elif string == "sub":
-                self.actual = token("sub", string)
+                self.actual = token("SUB", string)
             elif string == "main":
-                self.actual = token("main", string)
+                self.actual = token("MAIN", string)
             elif string == "end":
                 self.actual = token("FIN", string)
             elif string == "wend":
@@ -255,17 +258,17 @@ class Assignment(Node):
     def evaluate(self,table):
         table.setter(self.children[0].value,self.children[1].evaluate(table))
 
-class Print(Node): # reserved string
+class Print(Node):
     def __init__(self,list_children):
         self.children = list_children
     def evaluate(self,table):
         var = self.children[0].evaluate(table)
-        if type(var) is tuple:#check if var type match
+        if type(var) is tuple:
             var = var[0]
         print(var)
 
 
-class Node_if(Node): # reserved string
+class Node_if(Node): 
     def __init__(self,list_children):
         self.children = list_children
     def evaluate(self,table):
@@ -275,10 +278,10 @@ class Node_if(Node): # reserved string
             return self.children[2].evaluate(table)
         return None
 
-class Node_While(Node): # reserved string
+class Node_While(Node):
     def __init__(self,list_children):
         self.children = list_children
-        if len(self.children) != 2: raise Exception("Error - in Unop, UnOp cant have more than one child, children: ",self.children)
+        if len(self.children) != 2: raise Exception("Error - in Node_While, Node_While cant have more than two child, children: ",self.children)
     def evaluate(self,table):
         while self.children[0].evaluate(table):
             self.children[1].evaluate(table)
@@ -286,8 +289,15 @@ class Node_While(Node): # reserved string
 class VarDec(Node):
     def __init__(self,list_children):
         self.children = list_children
+        if len(self.children) != 2: raise Exception("Error - in VarDec, VarDec cant have more(or less) than two children, children: ",self.children)
     def evaluate(self,table):
         table.declare(self.children[0].value,[None,self.children[1].evaluate(table)])
+
+class FuncDec(Node):
+    def __init__(self,value,list_children):
+        self.children = list_children
+    def evaluate(self,table):
+        sys.exit(FuncDec)
 
 class Node_type(Node):
     def __init__(self,value):
@@ -534,25 +544,35 @@ class parser:
 
     @staticmethod
     def Program():
-       
         state_children = []
+        func_dec_list = []
 
-        for i in ["sub","main","(",")","\n"] : # better than 5 ifs
-            if parser.token.actual.value != i:
-                raise Exception("Error - wrong order at beginning expected:",i,"received:", parser.token.actual.value)
-            parser.token.selectNext()
+        while parser.token.actual.stamp != "EOF":
 
-        state_children.append(parser.Statement())
-        while parser.token.actual.stamp == "LBREAK":
-            parser.token.selectNext()
-            state_children.append(parser.Statement())
+            if parser.token.actual.stamp == "SUB":
 
-        if  parser.token.actual.value == "end":
-            parser.token.selectNext()
-            if  parser.token.actual.value == "sub":
-                return Statements('statements', state_children)
-            raise Exception("Error - wrong order at ending expected:","sub","received:", parser.token.actual.value)
-        raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
+                for i in ["sub","main","(",")","\n"] : # better than 5 ifs
+                    if parser.token.actual.value != i:
+                        raise Exception("Error - wrong order at beginning expected:",i,"received:", parser.token.actual.value)
+                    parser.token.selectNext()
+
+                state_children.append(parser.Statement())
+                while parser.token.actual.stamp == "LBREAK":
+                    parser.token.selectNext()
+                    state_children.append(parser.Statement())
+
+                if  parser.token.actual.value == "end":
+                    parser.token.selectNext()
+                    if  parser.token.actual.value == "sub":
+                        parser.token.selectNext()
+                    else:
+                        raise Exception("Error - wrong order at ending expected:","sub","received:", parser.token.actual.value)
+                else:
+                    raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
+            else:
+                print("debug: ",parser.token.actual.stamp)
+                parser.token.selectNext()
+        return Statements('statements', state_children)
 
 
 
@@ -566,8 +586,8 @@ class parser:
         return ast 
 
 if __name__ == '__main__':
-    code = sys.argv[1]
-    #code = "code.vbs"
+    #code = sys.argv[1]
+    code = "code.vbs"
     with open(code, "r") as in_file:
             code = in_file.read()
 
