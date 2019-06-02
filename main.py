@@ -81,6 +81,9 @@ class tokenizer():
         elif self.origin[self.position] == ")":
             self.actual = token("CLOSE", ")")
             self.position += 1
+        elif self.origin[self.position] == ",":
+            self.actual = token("COMMA", ",")
+            self.position += 1
 
         elif self.origin[self.position].isalpha():
             string = ""
@@ -125,6 +128,8 @@ class tokenizer():
                 self.actual = token("TRUE", string)
             elif string == "false":
                 self.actual = token("FALSE", string)
+            elif string == "function":
+                self.actual = token("FUNC", string)
             else:
                 self.actual = token("ID", string)
 
@@ -293,11 +298,20 @@ class VarDec(Node):
     def evaluate(self,table):
         table.declare(self.children[0].value,[None,self.children[1].evaluate(table)])
 
+class SubDec(Node):
+    def __init__(self,value,list_children):
+        self.children = list_children
+        self.value = value
+    def evaluate(self,table):
+        #table.declare(self.value,["SUB",self.children[0]])
+        for e in self.children:
+           e.evaluate(table)
+
 class FuncDec(Node):
     def __init__(self,value,list_children):
         self.children = list_children
     def evaluate(self,table):
-        sys.exit(FuncDec)
+        table.declare(self.children[0].value,["FUNCTION",self.children[1]])
 
 class Node_type(Node):
     def __init__(self,value):
@@ -319,7 +333,7 @@ class NoOp(Node):
 class SymbolTable():
     def __init__(self):
         self.table = {}
-        self.reserved_set = {"sub","main","end","print","dim","if","else","then","while","end","wend"}
+        self.reserved_set = {"sub","end","print","dim","if","else","then","while","end","wend"}
 
     def getter(self,key):
         if key in self.table:
@@ -535,12 +549,12 @@ class parser:
 
     @staticmethod
     def Statment_loop():
-        state_children = []
-        state_children.append(parser.Statement())
+        statment_children = []
+        statment_children.append(parser.Statement())
         while parser.token.actual.stamp == "LBREAK":
             parser.token.selectNext()
-            state_children.append(parser.Statement())
-        return Statements('statements', state_children)
+            statment_children.append(parser.Statement())
+        return Statements('statements', statment_children)
 
     @staticmethod
     def Program():
@@ -550,28 +564,116 @@ class parser:
         while parser.token.actual.stamp != "EOF":
 
             if parser.token.actual.stamp == "SUB":
+                sub_vars = []
+                sub_nodes = []
 
-                for i in ["sub","main","(",")","\n"] : # better than 5 ifs
-                    if parser.token.actual.value != i:
+                for i in ["SUB","MAIN","OPEN"] : # better than 5 ifs ,"CLOSE","LBREAK"
+                    if i == "MAIN": 
+                        sub_name = parser.token.actual.value
+                    if parser.token.actual.stamp != i:
                         raise Exception("Error - wrong order at beginning expected:",i,"received:", parser.token.actual.value)
                     parser.token.selectNext()
 
-                state_children.append(parser.Statement())
+                while parser.token.actual.stamp != "CLOSE":
+                    if parser.token.actual.stamp == "ID":
+                        var = Identifier(parser.token.actual.value)
+                        parser.token.selectNext()
+                        if parser.token.actual.stamp == "AS":
+                            parser.token.selectNext()
+                            if parser.token.actual.stamp == "TYPE":
+                                var_type = parser.token.actual.value
+                                parser.token.selectNext()
+                                sub_vars.append(VarDec([var,Node_type(var_type)]))
+                                if parser.token.actual.stamp == "COMMA":
+                                    parser.token.selectNext()
+                                elif parser.token.actual.stamp == "CLOSE":
+                                    parser.token.selectNext()
+                                    break
+                                else:
+                                    raise Exception("Error -  expected:","comma","received:", parser.token.actual.value)
+                            else:
+                                raise Exception("Error -  expected:","type","received:", parser.token.actual.value)
+                        else:
+                            raise Exception("Error -  expected:","as","received:", parser.token.actual.value)
+
+
+                if parser.token.actual.stamp != "LBREAK":
+                    raise Exception("Error - wrong order at middle expected:","LBREAK","received:", parser.token.actual.stamp)
+
                 while parser.token.actual.stamp == "LBREAK":
                     parser.token.selectNext()
-                    state_children.append(parser.Statement())
+                    sub_nodes.append(parser.Statement())
 
-                if  parser.token.actual.value == "end":
+                if  parser.token.actual.stamp == "FIN":
                     parser.token.selectNext()
-                    if  parser.token.actual.value == "sub":
+                    if  parser.token.actual.stamp == "SUB":
                         parser.token.selectNext()
                     else:
                         raise Exception("Error - wrong order at ending expected:","sub","received:", parser.token.actual.value)
                 else:
                     raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
-            else:
-                print("debug: ",parser.token.actual.stamp)
+
+                sub_nodes = sub_vars + sub_nodes
+                state_children.append(SubDec(sub_name,sub_nodes))
+                # sub declaration ends here
+
+            if parser.token.actual.stamp == "FUNC":
+                func_vars = []
+                func_nodes = []
+
+                for i in ["FUNC","ID","OPEN"] : # better than 5 ifs ,"CLOSE","LBREAK"
+                    if i == "ID": 
+                        func_name = parser.token.actual.value
+                    if parser.token.actual.stamp != i:
+                        raise Exception("Error - wrong order at beginning expected:",i,"received:", parser.token.actual.value)
+                    parser.token.selectNext()
+
+                while parser.token.actual.stamp != "CLOSE":
+                    if parser.token.actual.stamp == "ID":
+                        var = Identifier(parser.token.actual.value)
+                        parser.token.selectNext()
+                        if parser.token.actual.stamp == "AS":
+                            parser.token.selectNext()
+                            if parser.token.actual.stamp == "TYPE":
+                                var_type = parser.token.actual.value
+                                parser.token.selectNext()
+                                func_vars.append(VarDec([var,Node_type(var_type)]))
+                                if parser.token.actual.stamp == "COMMA":
+                                    parser.token.selectNext()
+                                elif parser.token.actual.stamp == "CLOSE":
+                                    parser.token.selectNext()
+                                    break
+                                else:
+                                    raise Exception("Error -  expected:","comma","received:", parser.token.actual.value)
+                            else:
+                                raise Exception("Error -  expected:","type","received:", parser.token.actual.value)
+                        else:
+                            raise Exception("Error -  expected:","as","received:", parser.token.actual.value)
+
+
+                if parser.token.actual.stamp != "LBREAK":
+                    raise Exception("Error - wrong order at middle expected:","LBREAK","received:", parser.token.actual.stamp)
+
+                while parser.token.actual.stamp == "LBREAK":
+                    parser.token.selectNext()
+                    func_nodes.append(parser.Statement())
+
+                if  parser.token.actual.stamp == "FIN":
+                    parser.token.selectNext()
+                    if  parser.token.actual.stamp == "SUB":
+                        parser.token.selectNext()
+                    else:
+                        raise Exception("Error - wrong order at ending expected:","sub","received:", parser.token.actual.value)
+                else:
+                    raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
+
+                func_nodes = func_vars + func_nodes
+                func_dec_list.append(FuncDec(func_name,func_nodes))
+                #func dec ends here
+            elif parser.token.actual.stamp == "LBREAK":
                 parser.token.selectNext()
+
+        state_children = func_dec_list + state_children
         return Statements('statements', state_children)
 
 

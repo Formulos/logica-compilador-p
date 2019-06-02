@@ -1,6 +1,4 @@
-Sub main()
-    Dim tb as boolean
-    Dim ti as integer
+function lols(ti as integer, tb as boolean)
 
     tb = TRUE
     ti = 10
