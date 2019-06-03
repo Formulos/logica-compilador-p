@@ -178,8 +178,8 @@ class BinOp(Node):
             if vtype2 is bool:
                 vtype2 = 'boolean'
 
-        if vtype1 != vtype2:
-             raise Exception("Error - in BinOp, differente var types ",vtype1,vtype2)
+        #if vtype1 != vtype2:
+        #     raise Exception("Error - in BinOp, differente var types ",vtype1,vtype2)
 
         # integerer operetors
         if self.value == "+":
@@ -202,7 +202,7 @@ class BinOp(Node):
                     return (var1 or var2)
         if self.value == "and":
                     return (var1 and var2)
-        raise Exception("Error - in Binop, No operation possible (aka something went therible wrong), children: ",self.children," value: ",var1)
+        raise Exception("Error - in Binop, No operation possible (aka something went terible wrong), children: ",self.children," value: ",var1)
 
 class UnOp(Node):
     def __init__(self,value,list_children):
@@ -321,6 +321,7 @@ class FuncCall(Node):
     def evaluate(self,table):
         func = table.getter(self.value)
         new_table = SymbolTable()
+        new_table.clone(table)
         order = []
         for i in func[1][0][0:-1]: #put vars in the new table
             order.append(i.children[0].value)
@@ -328,7 +329,7 @@ class FuncCall(Node):
 
         for x in range(len(order)): # put list_children values in new_table
             value = self.children[x].value
-            if self.children[x].value in table.table: #note: this is probaly the worst way to do this
+            if self.children[x].value in table.table: #note: this is probably the worst way to do this
                 value = table.getter(value)
             new_table.setter(order[x],value)
 
@@ -721,7 +722,6 @@ class parser:
                 else:
                     raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
 
-                func_nodes = func_vars + func_nodes
                 func_dec_list.append(FuncDec(func_name.value,[func_vars,func_nodes]))
                 
                 #func dec ends here
