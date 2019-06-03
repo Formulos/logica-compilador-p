@@ -94,8 +94,6 @@ class tokenizer():
                 self.actual = token("PRINT", string)
             elif string == "sub":
                 self.actual = token("SUB", string)
-            elif string == "main":
-                self.actual = token("MAIN", string)
             elif string == "end":
                 self.actual = token("FIN", string)
             elif string == "wend":
@@ -130,6 +128,8 @@ class tokenizer():
                 self.actual = token("FALSE", string)
             elif string == "function":
                 self.actual = token("FUNC", string)
+            elif string == "call":
+                self.actual = token("Call", string)
             else:
                 self.actual = token("ID", string)
 
@@ -303,9 +303,9 @@ class SubDec(Node):
         self.children = list_children
         self.value = value
     def evaluate(self,table):
-        #table.declare(self.value,["SUB",self.children[0]])
-        for e in self.children:
-           e.evaluate(table)
+        table.declare(self.value,["SUB",[[],self.children]])
+        #for e in self.children:
+        #   e.evaluate(table)
 
 class FuncDec(Node):
     def __init__(self,value,list_children):
@@ -335,7 +335,8 @@ class FuncCall(Node):
 
         for e in func[1][1]:
             e.evaluate(new_table)
-        return new_table.getter(self.value)
+        if func[0] == "FUNCTION":
+            return new_table.getter(self.value)
 
         #need to pass func as variable
 class Node_type(Node):
@@ -600,7 +601,7 @@ class parser:
     @staticmethod
     def Program():
         state_children = []
-        func_dec_list = []
+        has_main = False
 
         while parser.token.actual.stamp != "EOF":
 
@@ -608,9 +609,11 @@ class parser:
                 sub_vars = []
                 sub_nodes = []
 
-                for i in ["SUB","MAIN","OPEN"] : # better than 5 ifs ,"CLOSE","LBREAK"
-                    if i == "MAIN": 
+                for i in ["SUB","ID","OPEN"] : # better than 5 ifs ,"CLOSE","LBREAK"
+                    if i == "ID": 
                         sub_name = parser.token.actual.value
+                        if parser.token.actual.value == "main":
+                            has_main = True
                     if parser.token.actual.stamp != i:
                         raise Exception("Error - wrong order at beginning expected:",i,"received:", parser.token.actual.value)
                     parser.token.selectNext()
@@ -722,13 +725,13 @@ class parser:
                 else:
                     raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
 
-                func_dec_list.append(FuncDec(func_name.value,[func_vars,func_nodes]))
+                state_children.append(FuncDec(func_name.value,[func_vars,func_nodes]))
                 
                 #func dec ends here
             elif parser.token.actual.stamp == "LBREAK":
                 parser.token.selectNext()
-
-        state_children = func_dec_list + state_children
+        if has_main:
+            state_children.append(FuncCall("main",[]))
         return Statements('statements', state_children)
 
 

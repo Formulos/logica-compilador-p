@@ -12,9 +12,9 @@ End Function
 
 Sub Main()
     Dim a as Integer
-    a = 1
+    a = 0
 
-    a = a +soma(a,true)
+    a = soma(a,true)
     print a
 
 End Sub
