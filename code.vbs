@@ -1,16 +1,13 @@
-function soma() as Integer
-    print 1234567890
-    soma = 90
+function soma(h as Integer) as Integer
+    h = 1
+    soma = h
 End Sub
 
 Sub Main()
     Dim a as Integer
+    a =1
 
-    a = Soma()
+    a = a + soma(a)
     print a
-    print a
-    Dim c as Integer
-    c = 2
-    print c
 
 End Sub

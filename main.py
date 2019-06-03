@@ -360,6 +360,7 @@ class SymbolTable():
 
     def setter(self,key,value):
         if key in self.table:
+            if type(value) is tuple: value = value[0]
             self.table[key][0] = value
         else:
             raise Exception("Error - var: ",key,"was not declared using dim")
@@ -416,7 +417,8 @@ class parser:
             if parser.token.actual.stamp == "OPEN":
                 func_variables = []
                 while parser.token.actual.stamp != "CLOSE":
-                    parser.token.selectNext() #WRONG but is works for now
+                    parser.token.selectNext()
+                    func_variables.append(parser.RelExpression()) 
                 parser.token.selectNext()
                 return FuncCall(name,func_variables)
 
