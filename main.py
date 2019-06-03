@@ -129,7 +129,7 @@ class tokenizer():
             elif string == "function":
                 self.actual = token("FUNC", string)
             elif string == "call":
-                self.actual = token("Call", string)
+                self.actual = token("CALL", string)
             else:
                 self.actual = token("ID", string)
 
@@ -303,7 +303,7 @@ class SubDec(Node):
         self.children = list_children
         self.value = value
     def evaluate(self,table):
-        table.declare(self.value,["SUB",[[],self.children]])
+        table.declare(self.value,["SUB",[self.children[0],self.children[1]]])
         #for e in self.children:
         #   e.evaluate(table)
 
@@ -359,7 +359,7 @@ class NoOp(Node):
 class SymbolTable():
     def __init__(self):
         self.table = {}
-        self.reserved_set = {"sub","end","print","dim","if","else","then","while","end","wend"}
+        self.reserved_set = {"call","sub","end","print","dim","if","else","then","while","end","wend"}
 
     def getter(self,key):
         if key in self.table:
@@ -558,6 +558,21 @@ class parser:
                 return Node_While(exp)
             raise Exception("Error - while expression did not enconter wend, received: ", parser.token.actual.value)
 
+        elif parser.token.actual.stamp == 'CALL': #sub call
+            
+            parser.token.selectNext()
+            name = parser.token.actual.value
+            parser.token.selectNext()
+
+            if parser.token.actual.stamp == "OPEN":
+                func_variables = []
+                while parser.token.actual.stamp != "CLOSE":
+                    parser.token.selectNext()
+                    func_variables.append(parser.RelExpression()) 
+                parser.token.selectNext()
+                return FuncCall(name,func_variables)
+            raise Exception("Error - wrong order at call")
+
         elif parser.token.actual.stamp == "IF":
             parser.token.selectNext()
             exp = [parser.RelExpression()]
@@ -658,8 +673,7 @@ class parser:
                 else:
                     raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
 
-                sub_nodes = sub_vars + sub_nodes
-                state_children.append(SubDec(sub_name,sub_nodes))
+                state_children.append(SubDec(sub_name,[sub_vars,sub_nodes]))
                 # sub declaration ends here
 
             if parser.token.actual.stamp == "FUNC":
