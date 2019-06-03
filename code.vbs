@@ -1,13 +1,12 @@
-function soma(h as Integer) as Integer
-    h = 1
+function soma(h as Integer,m AS BOOLEAN) as Integer
     soma = h
-End Sub
+End Function
 
 Sub Main()
     Dim a as Integer
-    a =1
+    a = 1
 
-    a = a + soma(a)
+    a = a +soma(a,true)
     print a
 
 End Sub

@@ -312,20 +312,31 @@ class FuncDec(Node):
         self.children = list_children
         self.value = value
     def evaluate(self,table):
-        table.declare(self.value,["FUNCTION",self.children[1]])
+        table.declare(self.value,["FUNCTION",[self.children[0],self.children[1]]])
 
 class FuncCall(Node):
     def __init__(self,value,list_children):
         self.children = list_children
         self.value = value
     def evaluate(self,table):
+        func = table.getter(self.value)
         new_table = SymbolTable()
-        new_table.clone(table)
-        func = new_table.getter(self.value)
-        for e in func[1]:
+        order = []
+        for i in func[1][0][0:-1]: #put vars in the new table
+            order.append(i.children[0].value)
+            i.evaluate(new_table)
+
+        for x in range(len(order)): # put list_children values in new_table
+            value = self.children[x].value
+            if self.children[x].value in table.table: #note: this is probaly the worst way to do this
+                value = table.getter(value)
+            new_table.setter(order[x],value)
+
+        for e in func[1][1]:
             e.evaluate(new_table)
         return new_table.getter(self.value)
 
+        #need to pass func as variable
 class Node_type(Node):
     def __init__(self,value):
         self.value = value
@@ -703,10 +714,10 @@ class parser:
 
                 if  parser.token.actual.stamp == "FIN":
                     parser.token.selectNext()
-                    if  parser.token.actual.stamp == "SUB":
+                    if  parser.token.actual.stamp == "FUNC":
                         parser.token.selectNext()
                     else:
-                        raise Exception("Error - wrong order at ending expected:","sub","received:", parser.token.actual.value)
+                        raise Exception("Error - wrong order at ending expected:","FUNC","received:", parser.token.actual.value)
                 else:
                     raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
 
