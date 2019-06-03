@@ -310,8 +310,21 @@ class SubDec(Node):
 class FuncDec(Node):
     def __init__(self,value,list_children):
         self.children = list_children
+        self.value = value
     def evaluate(self,table):
-        table.declare(self.children[0].value,["FUNCTION",self.children[1]])
+        table.declare(self.value,["FUNCTION",self.children[1]])
+
+class FuncCall(Node):
+    def __init__(self,value,list_children):
+        self.children = list_children
+        self.value = value
+    def evaluate(self,table):
+        new_table = SymbolTable()
+        new_table.clone(table)
+        func = new_table.getter(self.value)
+        for e in func[1]:
+            e.evaluate(new_table)
+        return new_table.getter(self.value)
 
 class Node_type(Node):
     def __init__(self,value):
@@ -350,6 +363,9 @@ class SymbolTable():
             self.table[key][0] = value
         else:
             raise Exception("Error - var: ",key,"was not declared using dim")
+    def clone(self,over_table):
+        self.table = over_table.table.copy()
+
 
 class Statements(Node):
     def __init__(self, value, children):
@@ -393,14 +409,25 @@ class parser:
             return node
 
         if parser.token.actual.stamp == 'ID':
-            node = Identifier(parser.token.actual.value)
+            
+            name = parser.token.actual.value
             parser.token.selectNext()
+
+            if parser.token.actual.stamp == "OPEN":
+                func_variables = []
+                while parser.token.actual.stamp != "CLOSE":
+                    parser.token.selectNext() #WRONG but is works for now
+                parser.token.selectNext()
+                return FuncCall(name,func_variables)
+
+            node = Identifier(name)
             return node
 
         if parser.token.actual.stamp == 'INPUT':
             node = Node_Input(parser.token.actual.value)
             parser.token.selectNext()
             return node
+
 
         elif parser.token.actual.stamp == "OPEN":
             parser.token.selectNext()
@@ -483,8 +510,8 @@ class parser:
             str_id = parser.token.actual.value
             parser.token.selectNext()
             if parser.token.actual.stamp == "EQUAL":
-                parser.token.selectNext()
-                return Assignment("=",[Identifier(str_id),parser.parseExpression()])
+                parser.token.selectNext()                    
+                return Assignment("=",[Identifier(str_id),parser.RelExpression()])
         
         elif parser.token.actual.stamp == "DIM":
             parser.token.selectNext()
@@ -596,7 +623,8 @@ class parser:
                         else:
                             raise Exception("Error -  expected:","as","received:", parser.token.actual.value)
 
-
+                if parser.token.actual.stamp == "CLOSE":
+                    parser.token.selectNext()
                 if parser.token.actual.stamp != "LBREAK":
                     raise Exception("Error - wrong order at middle expected:","LBREAK","received:", parser.token.actual.stamp)
 
@@ -623,7 +651,7 @@ class parser:
 
                 for i in ["FUNC","ID","OPEN"] : # better than 5 ifs ,"CLOSE","LBREAK"
                     if i == "ID": 
-                        func_name = parser.token.actual.value
+                        func_name = Identifier(parser.token.actual.value)
                     if parser.token.actual.stamp != i:
                         raise Exception("Error - wrong order at beginning expected:",i,"received:", parser.token.actual.value)
                     parser.token.selectNext()
@@ -650,6 +678,19 @@ class parser:
                         else:
                             raise Exception("Error -  expected:","as","received:", parser.token.actual.value)
 
+                if parser.token.actual.stamp == "CLOSE": #temp fix
+                    parser.token.selectNext()
+                
+                if  parser.token.actual.stamp == "AS":
+                    parser.token.selectNext()
+                    if parser.token.actual.stamp == "TYPE":
+                        var_type = parser.token.actual.value
+                        parser.token.selectNext()
+                        func_vars.append(VarDec([func_name,Node_type(var_type)]))
+                    else:
+                        raise Exception("Error -  expected:","type","received:", parser.token.actual.value)
+                else:
+                    raise Exception("Error -  expected:","as","received:", parser.token.actual.value)
 
                 if parser.token.actual.stamp != "LBREAK":
                     raise Exception("Error - wrong order at middle expected:","LBREAK","received:", parser.token.actual.stamp)
@@ -668,7 +709,8 @@ class parser:
                     raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
 
                 func_nodes = func_vars + func_nodes
-                func_dec_list.append(FuncDec(func_name,func_nodes))
+                func_dec_list.append(FuncDec(func_name.value,[func_vars,func_nodes]))
+                
                 #func dec ends here
             elif parser.token.actual.stamp == "LBREAK":
                 parser.token.selectNext()

@@ -1,9 +1,16 @@
-function lols(ti as integer, tb as boolean)
+function soma() as Integer
+    print 1234567890
+    soma = 90
+End Sub
 
-    tb = TRUE
-    ti = 10
+Sub Main()
+    Dim a as Integer
 
-    if tb then
-        print ti + 10
-    end if
+    a = Soma()
+    print a
+    print a
+    Dim c as Integer
+    c = 2
+    print c
+
 End Sub
