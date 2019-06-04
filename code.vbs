@@ -1,43 +1,20 @@
-Sub main()
-    ' adaptado da sabrina
-
-    dim fizz as integer
-    dim buzz as integer
-    dim fizzbuzz as integer
-    dim n as integer
-    dim tres as integer
-    dim cinco as integer
-    dim flag as boolean
-
-    n = INPUT
-    fizz = 0000
-    buzz = 1111
-    fizzbuzz = 00001111
-    flag = True
+function soma(h as Integer,m AS BOOLEAN) as Integer
+    h = h+1
+    if h < 3 then
+        h = soma(h,true)
+    end if
+    soma = h
 
 
-    while n > 0
-        tres = (n - (n / 3 * 3))
-        cinco = (n - (n / 5 * 5))
 
-        print n
 
-        if (tres = 0) and (cinco = 0) then
-            print fizzbuzz
-            flag = False
-        end if
+End Function
 
-        if (tres = 0) and (flag = True) then
-            print fizz
-            flag = False
-        end if
+Sub Main()
+    Dim a as Integer
+    a = 0
 
-        if (cinco = 0) and (flag = True) then
-            print buzz
-            flag = False
-        end if
+    a = soma(a,true)
+    print a
 
-        flag = True
-        n = n - 1
-    wend
-end sub
+End Sub

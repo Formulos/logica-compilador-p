@@ -33,13 +33,16 @@ class tokenizer():
     def __init__(self, origin):
         self.origin = origin
         self.position = 0
-        self.actual = token("FIN", "FIN")
+        self.actual = None
 
     def selectNext(self):
         while (self.position < len(self.origin)) and (self.origin[self.position] == " "):
             self.position += 1
 
-        if self.origin[self.position] == "=":
+        if self.position >= len(self.origin):
+            self.actual = token("EOF", "EOF")
+
+        elif self.origin[self.position] == "=":
             self.actual = token("EQUAL", "=")
             self.position += 1
 
@@ -78,6 +81,9 @@ class tokenizer():
         elif self.origin[self.position] == ")":
             self.actual = token("CLOSE", ")")
             self.position += 1
+        elif self.origin[self.position] == ",":
+            self.actual = token("COMMA", ",")
+            self.position += 1
 
         elif self.origin[self.position].isalpha():
             string = ""
@@ -87,9 +93,7 @@ class tokenizer():
             if string == "print":
                 self.actual = token("PRINT", string)
             elif string == "sub":
-                self.actual = token("sub", string)
-            elif string == "main":
-                self.actual = token("main", string)
+                self.actual = token("SUB", string)
             elif string == "end":
                 self.actual = token("FIN", string)
             elif string == "wend":
@@ -122,6 +126,10 @@ class tokenizer():
                 self.actual = token("TRUE", string)
             elif string == "false":
                 self.actual = token("FALSE", string)
+            elif string == "function":
+                self.actual = token("FUNC", string)
+            elif string == "call":
+                self.actual = token("CALL", string)
             else:
                 self.actual = token("ID", string)
 
@@ -170,8 +178,8 @@ class BinOp(Node):
             if vtype2 is bool:
                 vtype2 = 'boolean'
 
-        if vtype1 != vtype2:
-             raise Exception("Error - in BinOp, differente var types ",vtype1,vtype2)
+        #if vtype1 != vtype2:
+        #     raise Exception("Error - in BinOp, differente var types ",vtype1,vtype2)
 
         # integerer operetors
         if self.value == "+":
@@ -194,7 +202,7 @@ class BinOp(Node):
                     return (var1 or var2)
         if self.value == "and":
                     return (var1 and var2)
-        raise Exception("Error - in Binop, No operation possible (aka something went therible wrong), children: ",self.children," value: ",var1)
+        raise Exception("Error - in Binop, No operation possible (aka something went terible wrong), children: ",self.children," value: ",var1)
 
 class UnOp(Node):
     def __init__(self,value,list_children):
@@ -255,17 +263,17 @@ class Assignment(Node):
     def evaluate(self,table):
         table.setter(self.children[0].value,self.children[1].evaluate(table))
 
-class Print(Node): # reserved string
+class Print(Node):
     def __init__(self,list_children):
         self.children = list_children
     def evaluate(self,table):
         var = self.children[0].evaluate(table)
-        if type(var) is tuple:#check if var type match
+        if type(var) is tuple:
             var = var[0]
         print(var)
 
 
-class Node_if(Node): # reserved string
+class Node_if(Node): 
     def __init__(self,list_children):
         self.children = list_children
     def evaluate(self,table):
@@ -275,10 +283,10 @@ class Node_if(Node): # reserved string
             return self.children[2].evaluate(table)
         return None
 
-class Node_While(Node): # reserved string
+class Node_While(Node):
     def __init__(self,list_children):
         self.children = list_children
-        if len(self.children) != 2: raise Exception("Error - in Unop, UnOp cant have more than one child, children: ",self.children)
+        if len(self.children) != 2: raise Exception("Error - in Node_While, Node_While cant have more than two child, children: ",self.children)
     def evaluate(self,table):
         while self.children[0].evaluate(table):
             self.children[1].evaluate(table)
@@ -286,9 +294,51 @@ class Node_While(Node): # reserved string
 class VarDec(Node):
     def __init__(self,list_children):
         self.children = list_children
+        if len(self.children) != 2: raise Exception("Error - in VarDec, VarDec cant have more(or less) than two children, children: ",self.children)
     def evaluate(self,table):
         table.declare(self.children[0].value,[None,self.children[1].evaluate(table)])
 
+class SubDec(Node):
+    def __init__(self,value,list_children):
+        self.children = list_children
+        self.value = value
+    def evaluate(self,table):
+        table.declare(self.value,["SUB",[self.children[0],self.children[1]]])
+        #for e in self.children:
+        #   e.evaluate(table)
+
+class FuncDec(Node):
+    def __init__(self,value,list_children):
+        self.children = list_children
+        self.value = value
+    def evaluate(self,table):
+        table.declare(self.value,["FUNCTION",[self.children[0],self.children[1]]])
+
+class FuncCall(Node):
+    def __init__(self,value,list_children):
+        self.children = list_children
+        self.value = value
+    def evaluate(self,table):
+        func = table.getter(self.value)
+        new_table = SymbolTable()
+        new_table.clone(table)
+        order = []
+        for i in func[1][0][0:-1]: #put vars in the new table
+            order.append(i.children[0].value)
+            i.evaluate(new_table)
+
+        for x in range(len(order)): # put list_children values in new_table
+            value = self.children[x].value
+            if self.children[x].value in table.table: #note: this is probably the worst way to do this
+                value = table.getter(value)
+            new_table.setter(order[x],value)
+
+        for e in func[1][1]:
+            e.evaluate(new_table)
+        if func[0] == "FUNCTION":
+            return new_table.getter(self.value)
+
+        #need to pass func as variable
 class Node_type(Node):
     def __init__(self,value):
         self.value = value
@@ -309,7 +359,7 @@ class NoOp(Node):
 class SymbolTable():
     def __init__(self):
         self.table = {}
-        self.reserved_set = {"sub","main","end","print","dim","if","else","then","while","end","wend"}
+        self.reserved_set = {"call","sub","end","print","dim","if","else","then","while","end","wend"}
 
     def getter(self,key):
         if key in self.table:
@@ -323,9 +373,13 @@ class SymbolTable():
 
     def setter(self,key,value):
         if key in self.table:
+            if type(value) is tuple: value = value[0]
             self.table[key][0] = value
         else:
             raise Exception("Error - var: ",key,"was not declared using dim")
+    def clone(self,over_table):
+        self.table = over_table.table.copy()
+
 
 class Statements(Node):
     def __init__(self, value, children):
@@ -369,14 +423,26 @@ class parser:
             return node
 
         if parser.token.actual.stamp == 'ID':
-            node = Identifier(parser.token.actual.value)
+            
+            name = parser.token.actual.value
             parser.token.selectNext()
+
+            if parser.token.actual.stamp == "OPEN":
+                func_variables = []
+                while parser.token.actual.stamp != "CLOSE":
+                    parser.token.selectNext()
+                    func_variables.append(parser.RelExpression()) 
+                parser.token.selectNext()
+                return FuncCall(name,func_variables)
+
+            node = Identifier(name)
             return node
 
         if parser.token.actual.stamp == 'INPUT':
             node = Node_Input(parser.token.actual.value)
             parser.token.selectNext()
             return node
+
 
         elif parser.token.actual.stamp == "OPEN":
             parser.token.selectNext()
@@ -459,8 +525,8 @@ class parser:
             str_id = parser.token.actual.value
             parser.token.selectNext()
             if parser.token.actual.stamp == "EQUAL":
-                parser.token.selectNext()
-                return Assignment("=",[Identifier(str_id),parser.parseExpression()])
+                parser.token.selectNext()                    
+                return Assignment("=",[Identifier(str_id),parser.RelExpression()])
         
         elif parser.token.actual.stamp == "DIM":
             parser.token.selectNext()
@@ -491,6 +557,21 @@ class parser:
                 parser.token.selectNext()
                 return Node_While(exp)
             raise Exception("Error - while expression did not enconter wend, received: ", parser.token.actual.value)
+
+        elif parser.token.actual.stamp == 'CALL': #sub call
+            
+            parser.token.selectNext()
+            name = parser.token.actual.value
+            parser.token.selectNext()
+
+            if parser.token.actual.stamp == "OPEN":
+                func_variables = []
+                while parser.token.actual.stamp != "CLOSE":
+                    parser.token.selectNext()
+                    func_variables.append(parser.RelExpression()) 
+                parser.token.selectNext()
+                return FuncCall(name,func_variables)
+            raise Exception("Error - wrong order at call")
 
         elif parser.token.actual.stamp == "IF":
             parser.token.selectNext()
@@ -525,34 +606,147 @@ class parser:
 
     @staticmethod
     def Statment_loop():
-        state_children = []
-        state_children.append(parser.Statement())
+        statment_children = []
+        statment_children.append(parser.Statement())
         while parser.token.actual.stamp == "LBREAK":
             parser.token.selectNext()
-            state_children.append(parser.Statement())
-        return Statements('statements', state_children)
+            statment_children.append(parser.Statement())
+        return Statements('statements', statment_children)
 
     @staticmethod
     def Program():
-       
         state_children = []
+        has_main = False
 
-        for i in ["sub","main","(",")","\n"] : # better than 5 ifs
-            if parser.token.actual.value != i:
-                raise Exception("Error - wrong order at beginning expected:",i,"received:", parser.token.actual.value)
-            parser.token.selectNext()
+        while parser.token.actual.stamp != "EOF":
 
-        state_children.append(parser.Statement())
-        while parser.token.actual.stamp == "LBREAK":
-            parser.token.selectNext()
-            state_children.append(parser.Statement())
+            if parser.token.actual.stamp == "SUB":
+                sub_vars = []
+                sub_nodes = []
 
-        if  parser.token.actual.value == "end":
-            parser.token.selectNext()
-            if  parser.token.actual.value == "sub":
-                return Statements('statements', state_children)
-            raise Exception("Error - wrong order at ending expected:","sub","received:", parser.token.actual.value)
-        raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
+                for i in ["SUB","ID","OPEN"] : # better than 5 ifs ,"CLOSE","LBREAK"
+                    if i == "ID": 
+                        sub_name = parser.token.actual.value
+                        if parser.token.actual.value == "main":
+                            has_main = True
+                    if parser.token.actual.stamp != i:
+                        raise Exception("Error - wrong order at beginning expected:",i,"received:", parser.token.actual.value)
+                    parser.token.selectNext()
+
+                while parser.token.actual.stamp != "CLOSE":
+                    if parser.token.actual.stamp == "ID":
+                        var = Identifier(parser.token.actual.value)
+                        parser.token.selectNext()
+                        if parser.token.actual.stamp == "AS":
+                            parser.token.selectNext()
+                            if parser.token.actual.stamp == "TYPE":
+                                var_type = parser.token.actual.value
+                                parser.token.selectNext()
+                                sub_vars.append(VarDec([var,Node_type(var_type)]))
+                                if parser.token.actual.stamp == "COMMA":
+                                    parser.token.selectNext()
+                                elif parser.token.actual.stamp == "CLOSE":
+                                    parser.token.selectNext()
+                                    break
+                                else:
+                                    raise Exception("Error -  expected:","comma","received:", parser.token.actual.value)
+                            else:
+                                raise Exception("Error -  expected:","type","received:", parser.token.actual.value)
+                        else:
+                            raise Exception("Error -  expected:","as","received:", parser.token.actual.value)
+
+                if parser.token.actual.stamp == "CLOSE":
+                    parser.token.selectNext()
+                if parser.token.actual.stamp != "LBREAK":
+                    raise Exception("Error - wrong order at middle expected:","LBREAK","received:", parser.token.actual.stamp)
+
+                while parser.token.actual.stamp == "LBREAK":
+                    parser.token.selectNext()
+                    sub_nodes.append(parser.Statement())
+
+                if  parser.token.actual.stamp == "FIN":
+                    parser.token.selectNext()
+                    if  parser.token.actual.stamp == "SUB":
+                        parser.token.selectNext()
+                    else:
+                        raise Exception("Error - wrong order at ending expected:","sub","received:", parser.token.actual.value)
+                else:
+                    raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
+
+                state_children.append(SubDec(sub_name,[sub_vars,sub_nodes]))
+                # sub declaration ends here
+
+            if parser.token.actual.stamp == "FUNC":
+                func_vars = []
+                func_nodes = []
+
+                for i in ["FUNC","ID","OPEN"] : # better than 5 ifs ,"CLOSE","LBREAK"
+                    if i == "ID": 
+                        func_name = Identifier(parser.token.actual.value)
+                    if parser.token.actual.stamp != i:
+                        raise Exception("Error - wrong order at beginning expected:",i,"received:", parser.token.actual.value)
+                    parser.token.selectNext()
+
+                while parser.token.actual.stamp != "CLOSE":
+                    if parser.token.actual.stamp == "ID":
+                        var = Identifier(parser.token.actual.value)
+                        parser.token.selectNext()
+                        if parser.token.actual.stamp == "AS":
+                            parser.token.selectNext()
+                            if parser.token.actual.stamp == "TYPE":
+                                var_type = parser.token.actual.value
+                                parser.token.selectNext()
+                                func_vars.append(VarDec([var,Node_type(var_type)]))
+                                if parser.token.actual.stamp == "COMMA":
+                                    parser.token.selectNext()
+                                elif parser.token.actual.stamp == "CLOSE":
+                                    parser.token.selectNext()
+                                    break
+                                else:
+                                    raise Exception("Error -  expected:","comma","received:", parser.token.actual.value)
+                            else:
+                                raise Exception("Error -  expected:","type","received:", parser.token.actual.value)
+                        else:
+                            raise Exception("Error -  expected:","as","received:", parser.token.actual.value)
+
+                if parser.token.actual.stamp == "CLOSE": #temp fix
+                    parser.token.selectNext()
+                
+                if  parser.token.actual.stamp == "AS":
+                    parser.token.selectNext()
+                    if parser.token.actual.stamp == "TYPE":
+                        var_type = parser.token.actual.value
+                        parser.token.selectNext()
+                        func_vars.append(VarDec([func_name,Node_type(var_type)]))
+                    else:
+                        raise Exception("Error -  expected:","type","received:", parser.token.actual.value)
+                else:
+                    raise Exception("Error -  expected:","as","received:", parser.token.actual.value)
+
+                if parser.token.actual.stamp != "LBREAK":
+                    raise Exception("Error - wrong order at middle expected:","LBREAK","received:", parser.token.actual.stamp)
+
+                while parser.token.actual.stamp == "LBREAK":
+                    parser.token.selectNext()
+                    func_nodes.append(parser.Statement())
+
+                if  parser.token.actual.stamp == "FIN":
+                    parser.token.selectNext()
+                    if  parser.token.actual.stamp == "FUNC":
+                        parser.token.selectNext()
+                    else:
+                        raise Exception("Error - wrong order at ending expected:","FUNC","received:", parser.token.actual.value)
+                else:
+                    raise Exception("Error - wrong order at ending expected:","end","received:", parser.token.actual.value)
+
+                state_children.append(FuncDec(func_name.value,[func_vars,func_nodes]))
+                
+                #func dec ends here
+            elif parser.token.actual.stamp == "LBREAK":
+                parser.token.selectNext()
+        if has_main:
+            state_children.append(FuncCall("main",[]))
+        return Statements('statements', state_children)
 
 
 
@@ -566,8 +760,8 @@ class parser:
         return ast 
 
 if __name__ == '__main__':
-    code = sys.argv[1]
-    #code = "code.vbs"
+    #code = sys.argv[1]
+    code = "code.vbs"
     with open(code, "r") as in_file:
             code = in_file.read()
 
