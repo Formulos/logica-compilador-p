@@ -328,7 +328,7 @@ class FuncCall(Node):
             i.evaluate(new_table)
 
         for x in range(len(order)): # put list_children values in new_table
-            value = self.children[x].value
+            value = self.children[x].evaluate(table)
             if self.children[x].value in table.table: #note: this is probably the worst way to do this
                 value = table.getter(value)
             new_table.setter(order[x],value)
