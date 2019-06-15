@@ -335,7 +335,7 @@ class FuncCall(Node):
 
         for e in func[1][1]:
             e.evaluate(new_table)
-        if func[0] == "FUNCTION":
+        if func[0] != "SUB":
             return new_table.getter(self.value)
 
         #need to pass func as variable
@@ -760,8 +760,8 @@ class parser:
         return ast 
 
 if __name__ == '__main__':
-    #code = sys.argv[1]
-    code = "code.vbs"
+    code = sys.argv[1]
+    #code = "code.vbs"
     with open(code, "r") as in_file:
             code = in_file.read()
 
